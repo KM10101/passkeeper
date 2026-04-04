@@ -15,7 +15,10 @@ export function useEntries(groupId?: number, search?: string) {
   const update = useMutation({
     mutationFn: (args: { id: number; groupId: number | null; title: string; url: string | null; siteTitle: string | null; username: string | null; templateType: string; tags: string; notes: string | null; favorite: boolean; fields: NewEntryField[] }) =>
       updateEntry(args.id, args.groupId, args.title, args.url, args.siteTitle, args.username, args.templateType, args.tags, args.notes, args.favorite, args.fields),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['entries'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['entries'] });
+      qc.invalidateQueries({ queryKey: ['entry'] });
+    },
   });
   const remove = useMutation({
     mutationFn: (id: number) => deleteEntry(id),

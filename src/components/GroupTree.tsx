@@ -74,6 +74,7 @@ export function GroupTree({ selected, onSelect }: Props) {
             autoFocus
             onBlur={() => setAdding(false)}
           />
+          <button type="submit" className="hidden" />
         </form>
       ) : (
         <Button
