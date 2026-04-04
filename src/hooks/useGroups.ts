@@ -25,5 +25,5 @@ export function useGroups() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['groups'] }),
   });
 
-  return { groups, create: create.mutateAsync, update: update.mutateAsync, remove: remove.mutateAsync };
+  return { groups, createGroup: create.mutateAsync, updateGroup: update.mutateAsync, deleteGroup: remove.mutateAsync };
 }
