@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { GroupTree } from '../components/GroupTree';
 import { EntryList } from '../components/EntryList';
-import { SearchBar } from '../components/SearchBar';
 import { useVault } from '../hooks/useVault';
 
 interface Props { onLock: () => void; }
 
 export function VaultPage({ onLock }: Props) {
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
-  const [search, setSearch] = useState('');
-  const [_selectedEntry, setSelectedEntry] = useState<number | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<number | null>(null);
   const { lock } = useVault();
 
   return (
@@ -19,8 +17,12 @@ export function VaultPage({ onLock }: Props) {
         <button onClick={() => { lock(); onLock(); }}>Lock</button>
       </aside>
       <main style={{ flex: 1, padding: 8 }}>
-        <SearchBar value={search} onChange={setSearch} />
-        <EntryList groupId={selectedGroup} search={search} onSelect={setSelectedEntry} />
+        <EntryList
+          groupId={selectedGroup}
+          selectedEntryId={selectedEntry}
+          onSelect={setSelectedEntry}
+          onNewEntry={() => {}}
+        />
       </main>
     </div>
   );
