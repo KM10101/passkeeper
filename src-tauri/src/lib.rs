@@ -1,1 +1,2 @@
-// lib.rs — populated in later tasks
+pub mod error;
+pub mod state;
