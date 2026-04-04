@@ -1,2 +1,11 @@
 /target
 .worktrees/
+
+# Rust build artifacts
+src-tauri/target/
+
+# Node modules
+node_modules/
+
+# Frontend build output
+dist/
