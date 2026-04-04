@@ -54,8 +54,12 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
 
   const handleDelete = async () => {
     if (confirm(`Delete "${entry.title}"?`)) {
-      await deleteEntry(entry.id);
-      onDeleted();
+      try {
+        await deleteEntry(entry.id);
+        onDeleted();
+      } catch (err) {
+        console.error("Failed to delete entry", err);
+      }
     }
   };
 
