@@ -1,29 +1,87 @@
-import { useState } from 'react';
-import { GroupTree } from '../components/GroupTree';
-import { EntryList } from '../components/EntryList';
-import { useVault } from '../hooks/useVault';
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { AppShell } from "../components/layout/AppShell";
+import { GroupTree } from "../components/GroupTree";
+import { EntryList } from "../components/EntryList";
+import { EntryDetail } from "../components/entries/EntryDetail";
+import { EntryDialog } from "../components/entries/EntryDialog";
+import { useVault } from "../hooks/useVault";
+import { getEntry } from "../lib/tauri";
 
 interface Props { onLock: () => void; }
 
 export function VaultPage({ onLock }: Props) {
-  const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
-  const [selectedEntry, setSelectedEntry] = useState<number | null>(null);
   const { lock } = useVault();
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingEntryId, setEditingEntryId] = useState<number | null>(null);
+
+  const { data: editingDetail } = useQuery({
+    queryKey: ["entry", editingEntryId],
+    queryFn: () => getEntry(editingEntryId!),
+    enabled: editingEntryId !== null,
+  });
+
+  const handleLock = async () => {
+    await lock();
+    onLock();
+  };
+
+  const openNewEntry = () => {
+    setEditingEntryId(null);
+    setDialogOpen(true);
+  };
+
+  const openEditEntry = (id: number) => {
+    setEditingEntryId(id);
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+    setEditingEntryId(null);
+  };
 
   return (
-    <div style={{ display: 'flex', height: '100vh' }}>
-      <aside style={{ width: 200, borderRight: '1px solid #ccc', padding: 8 }}>
-        <GroupTree selected={selectedGroup} onSelect={setSelectedGroup} />
-        <button onClick={() => { lock(); onLock(); }}>Lock</button>
-      </aside>
-      <main style={{ flex: 1, padding: 8 }}>
-        <EntryList
-          groupId={selectedGroup}
-          selectedEntryId={selectedEntry}
-          onSelect={setSelectedEntry}
-          onNewEntry={() => {}}
-        />
-      </main>
-    </div>
+    <>
+      <AppShell
+        onLock={handleLock}
+        sidebar={
+          <GroupTree
+            selected={selectedGroupId}
+            onSelect={id => { setSelectedGroupId(id); setSelectedEntryId(null); }}
+          />
+        }
+        entryList={
+          <EntryList
+            groupId={selectedGroupId}
+            selectedEntryId={selectedEntryId}
+            onSelect={setSelectedEntryId}
+            onNewEntry={openNewEntry}
+          />
+        }
+        detail={
+          selectedEntryId !== null ? (
+            <EntryDetail
+              entryId={selectedEntryId}
+              onEdit={() => openEditEntry(selectedEntryId)}
+              onDeleted={() => setSelectedEntryId(null)}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
+              <p className="text-sm">Select an entry to view details</p>
+            </div>
+          )
+        }
+      />
+
+      <EntryDialog
+        open={dialogOpen}
+        onClose={handleDialogClose}
+        existing={editingDetail}
+        defaultGroupId={selectedGroupId}
+      />
+    </>
   );
 }
