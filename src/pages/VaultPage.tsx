@@ -7,6 +7,7 @@ import { EntryDetail } from "../components/entries/EntryDetail";
 import { EntryDialog } from "../components/entries/EntryDialog";
 import { useVault } from "../hooks/useVault";
 import { getEntry } from "../lib/tauri";
+import { SettingsPage } from "./SettingsPage";
 
 interface Props { onLock: () => void; }
 
@@ -16,6 +17,7 @@ export function VaultPage({ onLock }: Props) {
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEntryId, setEditingEntryId] = useState<number | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const { data: editingDetail } = useQuery({
     queryKey: ["entry", editingEntryId],
@@ -43,11 +45,15 @@ export function VaultPage({ onLock }: Props) {
     setEditingEntryId(null);
   };
 
+  if (showSettings) {
+    return <SettingsPage onBack={() => setShowSettings(false)} />;
+  }
+
   return (
     <>
       <AppShell
         onLock={handleLock}
-        onSettings={() => {}}
+        onSettings={() => setShowSettings(true)}
         sidebar={
           <GroupTree
             selected={selectedGroupId}

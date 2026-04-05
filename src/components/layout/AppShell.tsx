@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, type ReactNode } from "react";
-import { Moon, Sun, Lock } from "lucide-react";
+import { Moon, Sun, Lock, Settings } from "lucide-react";
 import { Button } from "../ui/button";
 import { useTheme } from "./ThemeProvider";
 
@@ -11,7 +11,7 @@ interface AppShellProps {
   onSettings: () => void;
 }
 
-export function AppShell({ sidebar, entryList, detail, onLock, onSettings: _onSettings }: AppShellProps) {
+export function AppShell({ sidebar, entryList, detail, onLock, onSettings }: AppShellProps) {
   const { theme, toggleTheme } = useTheme();
   const [sidebarW, setSidebarW] = useState(220);
   const [listW, setListW] = useState(320);
@@ -45,6 +45,9 @@ export function AppShell({ sidebar, entryList, detail, onLock, onSettings: _onSe
       <header className="flex items-center px-4 h-12 border-b border-border shrink-0">
         <span className="font-bold text-primary text-lg">PassKeeper</span>
         <div className="flex-1" />
+        <Button variant="ghost" size="icon" onClick={onSettings} title="Settings">
+          <Settings className="h-4 w-4" />
+        </Button>
         <Button variant="ghost" size="icon" onClick={toggleTheme} title="Toggle theme">
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
