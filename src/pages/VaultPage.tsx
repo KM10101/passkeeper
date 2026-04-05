@@ -47,6 +47,7 @@ export function VaultPage({ onLock }: Props) {
     <>
       <AppShell
         onLock={handleLock}
+        onSettings={() => {}}
         sidebar={
           <GroupTree
             selected={selectedGroupId}
