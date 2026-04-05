@@ -22,6 +22,8 @@ export interface Entry {
   tags: string;
   notes: string | null;
   favorite: boolean;
+  pinned: boolean;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }
@@ -49,6 +51,10 @@ export interface NewEntryField {
 export interface AppSettings {
   auto_lock_minutes: number;
   show_passwords_by_default: boolean;
+  favicon_cache_expiry_days: number;
+  http_proxy: string;
+  no_proxy: string;
+  storage_dir: string;
 }
 
 export interface SiteMetadata {
@@ -89,6 +95,10 @@ export const updateEntry = (
   favorite: boolean, fields: NewEntryField[],
 ) => invoke<Entry>('update_entry', { id, groupId, title, url, siteTitle, username, templateType, tags, notes, favorite, fields });
 export const deleteEntry = (id: number) => invoke<void>('delete_entry', { id });
+export const pinEntry = (id: number, pinned: boolean) =>
+  invoke<Entry>('pin_entry', { id, pinned });
+export const reorderEntries = (ids: number[], pinned: boolean) =>
+  invoke<void>('reorder_entries', { ids, pinned });
 
 // Metadata
 export const fetchSiteMetadata = (url: string) =>
@@ -104,8 +114,20 @@ export const importVault = (data: number[], exportPassword: string) =>
 
 // Settings
 export const getSettings = () => invoke<AppSettings>('get_settings');
-export const updateSettings = (autoLockMinutes: number, showPasswordsByDefault: boolean) =>
-  invoke<AppSettings>('update_settings', { autoLockMinutes, showPasswordsByDefault });
+export const updateSettings = (
+  autoLockMinutes: number,
+  showPasswordsByDefault: boolean,
+  faviconCacheExpiryDays: number,
+  httpProxy: string,
+  noProxy: string,
+) => invoke<AppSettings>('update_settings', {
+  autoLockMinutes, showPasswordsByDefault,
+  faviconCacheExpiryDays, httpProxy, noProxy,
+});
+
+export const getStorageDir = () => invoke<string>('get_storage_dir');
+export const migrateStorage = (newDir: string) =>
+  invoke<void>('migrate_storage', { newDir });
 
 // Shell
 export const openUrl = (url: string) => shellOpen(url);
@@ -115,6 +137,8 @@ export const saveFileDialog = (options?: { title?: string; filters?: Array<{ nam
   dialogSave(options);
 export const openFileDialog = (options?: { title?: string; filters?: Array<{ name: string; extensions: string[] }> }) =>
   dialogOpen({ ...options, multiple: false }) as Promise<string | null>;
+export const openDirDialog = () =>
+  dialogOpen({ directory: true, multiple: false }) as Promise<string | null>;
 
 // Vault IO – path-based
 export const exportVaultToPath = (path: string, exportPassword: string) =>

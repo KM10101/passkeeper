@@ -1,5 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { listEntries, createEntry, updateEntry, deleteEntry, NewEntryField } from '../lib/tauri';
+import {
+  listEntries, createEntry, updateEntry, deleteEntry,
+  pinEntry, reorderEntries, type NewEntryField,
+} from '../lib/tauri';
 
 export function useEntries(groupId?: number, search?: string) {
   const qc = useQueryClient();
@@ -24,10 +27,22 @@ export function useEntries(groupId?: number, search?: string) {
     mutationFn: (id: number) => deleteEntry(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['entries'] }),
   });
+  const pin = useMutation({
+    mutationFn: ({ id, pinned }: { id: number; pinned: boolean }) =>
+      pinEntry(id, pinned),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['entries'] }),
+  });
+  const reorder = useMutation({
+    mutationFn: ({ ids, pinned }: { ids: number[]; pinned: boolean }) =>
+      reorderEntries(ids, pinned),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['entries'] }),
+  });
   return {
     entries,
     createEntry: create.mutateAsync,
     updateEntry: update.mutateAsync,
     deleteEntry: remove.mutateAsync,
+    pinEntry: pin.mutateAsync,
+    reorderEntries: reorder.mutateAsync,
   };
 }
