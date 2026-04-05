@@ -17,7 +17,7 @@ fn main() {
     std::fs::create_dir_all(db_path.parent().unwrap()).unwrap();
     let conn = rusqlite::Connection::open(&db_path).unwrap();
     init_db(&conn).unwrap();
-    let app_state = AppState::new(conn);
+    let app_state = AppState::new(conn, db_path);
 
     tauri::Builder::default()
         .manage(app_state)

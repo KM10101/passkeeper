@@ -262,7 +262,7 @@ mod tests {
     fn make_unlocked_state() -> AppState {
         let conn = Connection::open_in_memory().unwrap();
         init_db(&conn).unwrap();
-        let state = AppState::new(conn);
+        let state = AppState::new(conn, std::path::PathBuf::new());
         *state.master_key.lock().unwrap() = Some(MasterKey([7u8; 32]));
         state
     }

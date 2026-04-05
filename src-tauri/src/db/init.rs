@@ -21,10 +21,12 @@ pub fn init_db(conn: &Connection) -> AppResult<()> {
             url           TEXT,
             site_title    TEXT,
             username      TEXT,
-            template_type TEXT    NOT NULL DEFAULT 'password',
+            template_type TEXT    NOT NULL DEFAULT 'custom',
             tags          TEXT    NOT NULL DEFAULT '[]',
             notes         TEXT,
             favorite      INTEGER NOT NULL DEFAULT 0,
+            pinned        INTEGER NOT NULL DEFAULT 0,
+            sort_order    INTEGER NOT NULL DEFAULT 0,
             created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
             updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
         );

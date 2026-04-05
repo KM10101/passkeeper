@@ -61,7 +61,7 @@ mod tests {
     fn make_state() -> AppState {
         let conn = Connection::open_in_memory().unwrap();
         init_db(&conn).unwrap();
-        AppState::new(conn)
+        AppState::new(conn, std::path::PathBuf::new())
     }
 
     #[test]

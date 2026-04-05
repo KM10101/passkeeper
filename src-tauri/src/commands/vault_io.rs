@@ -142,7 +142,7 @@ mod tests {
     fn make_unlocked_state() -> AppState {
         let conn = Connection::open_in_memory().unwrap();
         init_db(&conn).unwrap();
-        let state = AppState::new(conn);
+        let state = AppState::new(conn, std::path::PathBuf::new());
         *state.master_key.lock().unwrap() = Some(MasterKey([9u8; 32]));
         state
     }
@@ -161,7 +161,7 @@ mod tests {
 
         let conn2 = Connection::open_in_memory().unwrap();
         init_db(&conn2).unwrap();
-        let state2 = AppState::new(conn2);
+        let state2 = AppState::new(conn2, std::path::PathBuf::new());
         *state2.master_key.lock().unwrap() = Some(MasterKey([9u8; 32]));
         import_vault_inner(&export_bytes, "export_pw", &state2).unwrap();
 
@@ -189,7 +189,7 @@ mod tests {
 
         let conn2 = Connection::open_in_memory().unwrap();
         init_db(&conn2).unwrap();
-        let state2 = AppState::new(conn2);
+        let state2 = AppState::new(conn2, std::path::PathBuf::new());
         *state2.master_key.lock().unwrap() = Some(MasterKey([9u8; 32]));
         import_vault_inner(&export_bytes, "export_pw", &state2).unwrap();
 

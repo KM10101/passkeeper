@@ -22,6 +22,8 @@ pub struct Entry {
     pub tags: String, // JSON array string e.g. '["work","dev"]'
     pub notes: Option<String>,
     pub favorite: bool,
+    pub pinned: bool,
+    pub sort_order: i64,
     pub created_at: String,
     pub updated_at: String,
 }
