@@ -21,6 +21,8 @@ fn main() {
 
     tauri::Builder::default()
         .manage(app_state)
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             commands::auth::unlock,
             commands::auth::lock,
@@ -39,6 +41,8 @@ fn main() {
             commands::metadata::get_favicon,
             commands::vault_io::export_vault,
             commands::vault_io::import_vault,
+            commands::vault_io::export_vault_to_path,
+            commands::vault_io::import_vault_from_path,
             commands::settings::get_settings,
             commands::settings::update_settings,
         ])

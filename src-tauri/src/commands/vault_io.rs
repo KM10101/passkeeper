@@ -112,6 +112,25 @@ pub async fn import_vault(
     import_vault_inner(&data, &export_password, &state)
 }
 
+#[tauri::command]
+pub async fn export_vault_to_path(
+    path: String, export_password: String,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let bytes = export_vault_inner(&export_password, &state)?;
+    std::fs::write(&path, &bytes)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn import_vault_from_path(
+    path: String, export_password: String,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let bytes = std::fs::read(&path)?;
+    import_vault_inner(&bytes, &export_password, &state)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -126,6 +145,34 @@ mod tests {
         let state = AppState::new(conn);
         *state.master_key.lock().unwrap() = Some(MasterKey([9u8; 32]));
         state
+    }
+
+    #[test]
+    fn export_import_with_field_type() {
+        let state = make_unlocked_state();
+        let fields = vec![
+            NewEntryField { field_name: "password".into(), field_type: "password".into(), field_value: "vault_pass".into(), sort_order: 0 },
+            NewEntryField { field_name: "note".into(), field_type: "text".into(), field_value: "plain note".into(), sort_order: 1 },
+        ];
+        create_entry_inner(None, "VaultEntry".into(), None, None, None,
+            "login".into(), "".into(), None, false, fields, &state).unwrap();
+
+        let export_bytes = export_vault_inner("export_pw", &state).unwrap();
+
+        let conn2 = Connection::open_in_memory().unwrap();
+        init_db(&conn2).unwrap();
+        let state2 = AppState::new(conn2);
+        *state2.master_key.lock().unwrap() = Some(MasterKey([9u8; 32]));
+        import_vault_inner(&export_bytes, "export_pw", &state2).unwrap();
+
+        let count: i64 = state2.db.lock().unwrap().query_row(
+            "SELECT COUNT(*) FROM entries", [], |r| r.get(0)
+        ).unwrap();
+        assert_eq!(count, 1);
+        let field_count: i64 = state2.db.lock().unwrap().query_row(
+            "SELECT COUNT(*) FROM entry_fields", [], |r| r.get(0)
+        ).unwrap();
+        assert_eq!(field_count, 2);
     }
 
     #[test]
