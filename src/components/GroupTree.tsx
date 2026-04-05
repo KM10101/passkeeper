@@ -32,60 +32,66 @@ export function GroupTree({ selected, onSelect }: Props) {
   };
 
   return (
-    <div className="flex flex-col gap-0.5 p-2">
-      <button
-        onClick={() => onSelect(null)}
-        className={cn(
-          "flex items-center gap-2 px-2 py-1.5 rounded-md text-sm w-full text-left transition-colors",
-          selected === null
-            ? "bg-primary text-primary-foreground"
-            : "hover:bg-accent hover:text-accent-foreground",
-        )}
-      >
-        <FolderOpen className="h-4 w-4 shrink-0" />
-        All Entries
-      </button>
-
-      {groups.map(group => (
-        <div key={group.id} className="group flex items-center gap-1">
-          <button
-            onClick={() => onSelect(group.id)}
-            className={cn(
-              "flex items-center gap-2 px-2 py-1.5 rounded-md text-sm flex-1 text-left transition-colors",
-              selected === group.id
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-accent hover:text-accent-foreground",
-            )}
-          >
-            <FolderClosed className="h-4 w-4 shrink-0" />
-            <span className="truncate">{group.name}</span>
-          </button>
-          <GroupMenu group={group} onRename={handleRename} onDelete={deleteGroup} />
-        </div>
-      ))}
-
-      {adding ? (
-        <form onSubmit={handleAdd} className="flex gap-1 px-1 mt-1">
-          <Input
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-            placeholder="Group name"
-            className="h-7 text-xs"
-            autoFocus
-            onBlur={() => setAdding(false)}
-          />
-          <button type="submit" className="hidden" />
-        </form>
-      ) : (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-1 w-full justify-start text-muted-foreground text-xs"
-          onClick={() => setAdding(true)}
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="sticky top-0 z-10 bg-background border-b border-border p-2 gap-0.5 flex flex-col">
+        <button
+          onClick={() => onSelect(null)}
+          className={cn(
+            "flex items-center gap-2 px-2 py-1.5 rounded-md text-sm w-full text-left transition-colors",
+            selected === null
+              ? "bg-primary text-primary-foreground"
+              : "hover:bg-accent hover:text-accent-foreground",
+          )}
         >
-          <Plus className="h-3 w-3 mr-1" /> New Group
-        </Button>
-      )}
+          <FolderOpen className="h-4 w-4 shrink-0" />
+          All Entries
+        </button>
+
+        {adding ? (
+          <form onSubmit={handleAdd} className="flex gap-1 px-1 mt-1">
+            <Input
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              placeholder="Group name"
+              className="h-7 text-xs"
+              autoFocus
+              onBlur={() => setAdding(false)}
+            />
+            <button type="submit" className="hidden" />
+          </form>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-1 w-full justify-start text-muted-foreground text-xs"
+            onClick={() => setAdding(true)}
+          >
+            <Plus className="h-3 w-3 mr-1" /> New Group
+          </Button>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-col gap-0.5 p-2">
+          {groups.map(group => (
+            <div key={group.id} className="group flex items-center gap-1">
+              <button
+                onClick={() => onSelect(group.id)}
+                className={cn(
+                  "flex items-center gap-2 px-2 py-1.5 rounded-md text-sm flex-1 text-left transition-colors",
+                  selected === group.id
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-accent hover:text-accent-foreground",
+                )}
+              >
+                <FolderClosed className="h-4 w-4 shrink-0" />
+                <span className="truncate">{group.name}</span>
+              </button>
+              <GroupMenu group={group} onRename={handleRename} onDelete={deleteGroup} />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
