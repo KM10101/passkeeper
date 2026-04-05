@@ -9,3 +9,4 @@ node_modules/
 
 # Frontend build output
 dist/
+.superpowers/
