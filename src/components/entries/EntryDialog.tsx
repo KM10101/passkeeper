@@ -12,7 +12,24 @@ import { useGroups } from "../../hooks/useGroups";
 import { useEntries } from "../../hooks/useEntries";
 import type { EntryDetail } from "../../lib/tauri";
 
-interface CustomField { id: number; field_name: string; field_value: string; sort_order: number; }
+const FIELD_TYPES = [
+  { value: "text", label: "Text" },
+  { value: "secret", label: "Secret" },
+  { value: "token", label: "Token" },
+  { value: "password", label: "Password" },
+  { value: "url", label: "URL" },
+  { value: "email", label: "Email" },
+  { value: "number", label: "Number" },
+  { value: "date", label: "Date" },
+];
+
+interface CustomField {
+  id: number;
+  field_name: string;
+  field_type: string;
+  field_value: string;
+  sort_order: number;
+}
 
 interface Props {
   open: boolean;
@@ -51,12 +68,21 @@ export function EntryDialog({ open, onClose, existing, defaultGroupId }: Props) 
       setCustomFields(
         existing.fields
           .filter(f => f.field_name !== "password")
-          .map((f, i) => ({ id: i, field_name: f.field_name, field_value: f.plaintext, sort_order: f.sort_order })),
+          .map((f, i) => ({
+            id: i,
+            field_name: f.field_name,
+            field_type: f.field_type,
+            field_value: f.plaintext,
+            sort_order: f.sort_order,
+          })),
       );
     } else {
       setTitle(""); setUsername(""); setPassword(""); setUrl("");
       setNotes(""); setTagsInput(""); setGroupId(defaultGroupId ?? null);
-      setFavorite(false); setCustomFields([]);
+      setFavorite(false);
+      setCustomFields([
+        { id: 0, field_name: "token", field_type: "token", field_value: "", sort_order: 1 },
+      ]);
     }
     setError(null);
     setShowPassword(false);
@@ -68,8 +94,13 @@ export function EntryDialog({ open, onClose, existing, defaultGroupId }: Props) 
     setSaving(true); setError(null);
     try {
       const fields = [
-        { field_name: "password", field_value: password, sort_order: 0 },
-        ...customFields.map((f, i) => ({ ...f, sort_order: i + 1 })),
+        { field_name: "password", field_type: "password", field_value: password, sort_order: 0 },
+        ...customFields.map((f, i) => ({
+          field_name: f.field_name,
+          field_type: f.field_type,
+          field_value: f.field_value,
+          sort_order: i + 1,
+        })),
       ];
       const args = {
         groupId, title: title.trim(), url: url.trim() || null, siteTitle: null,
@@ -151,12 +182,14 @@ export function EntryDialog({ open, onClose, existing, defaultGroupId }: Props) 
             <Label htmlFor="favorite">Favorite</Label>
           </div>
 
-          {/* Custom fields */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <Label>Custom Fields</Label>
               <Button type="button" variant="ghost" size="sm" onClick={() =>
-                setCustomFields(prev => [...prev, { id: Date.now() + Math.random(), field_name: "", field_value: "", sort_order: prev.length + 1 }])
+                setCustomFields(prev => [...prev, {
+                  id: Date.now() + Math.random(),
+                  field_name: "", field_type: "text", field_value: "", sort_order: prev.length + 1,
+                }])
               }>
                 <Plus className="h-3 w-3 mr-1" /> Add Field
               </Button>
@@ -164,13 +197,20 @@ export function EntryDialog({ open, onClose, existing, defaultGroupId }: Props) 
             {customFields.map((field, i) => (
               <div key={field.id} className="flex gap-2 items-center">
                 <Input
-                  placeholder="Field name"
+                  placeholder="Name"
                   value={field.field_name}
                   onChange={e => setCustomFields(prev => prev.map((f, idx) => idx === i ? { ...f, field_name: e.target.value } : f))}
-                  className="w-1/3"
+                  className="w-1/4"
                 />
+                <select
+                  value={field.field_type}
+                  onChange={e => setCustomFields(prev => prev.map((f, idx) => idx === i ? { ...f, field_type: e.target.value } : f))}
+                  className="flex h-10 rounded-md border border-input bg-background px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring w-[110px] shrink-0"
+                >
+                  {FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
                 <Input
-                  type="text"
+                  type={["password", "secret", "token"].includes(field.field_type) ? "password" : "text"}
                   placeholder="Value"
                   value={field.field_value}
                   onChange={e => setCustomFields(prev => prev.map((f, idx) => idx === i ? { ...f, field_value: e.target.value } : f))}
