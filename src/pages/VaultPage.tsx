@@ -66,6 +66,10 @@ export function VaultPage({ onLock }: Props) {
             selectedEntryId={selectedEntryId}
             onSelect={setSelectedEntryId}
             onNewEntry={openNewEntry}
+            onEditEntry={(id) => {
+              setSelectedEntryId(id);
+              setDialogOpen(true);
+            }}
           />
         }
         detail={
