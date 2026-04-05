@@ -38,10 +38,10 @@ pub fn export_vault_inner(export_password: &str, state: &AppState) -> AppResult<
         }))?.map(|r| r.unwrap()).collect(); x
     };
     let fields: Vec<EntryField> = {
-        let mut s = db.prepare("SELECT id,entry_id,field_name,field_value,nonce,sort_order FROM entry_fields")?;
+        let mut s = db.prepare("SELECT id,entry_id,field_name,field_type,field_value,nonce,sort_order FROM entry_fields")?;
         let x = s.query_map([], |r| Ok(EntryField {
             id: r.get(0)?, entry_id: r.get(1)?, field_name: r.get(2)?,
-            field_value: r.get(3)?, nonce: r.get(4)?, sort_order: r.get(5)?,
+            field_type: r.get(3)?, field_value: r.get(4)?, nonce: r.get(5)?, sort_order: r.get(6)?,
         }))?.map(|r| r.unwrap()).collect(); x
     };
 
@@ -91,8 +91,8 @@ pub fn import_vault_inner(data: &[u8], export_password: &str, state: &AppState) 
     }
     for f in &payload.fields {
         db.execute(
-            "INSERT OR IGNORE INTO entry_fields(id,entry_id,field_name,field_value,nonce,sort_order) VALUES(?1,?2,?3,?4,?5,?6)",
-            rusqlite::params![f.id, f.entry_id, f.field_name, f.field_value, f.nonce, f.sort_order],
+            "INSERT OR IGNORE INTO entry_fields(id,entry_id,field_name,field_type,field_value,nonce,sort_order) VALUES(?1,?2,?3,?4,?5,?6,?7)",
+            rusqlite::params![f.id, f.entry_id, f.field_name, f.field_type, f.field_value, f.nonce, f.sort_order],
         )?;
     }
     Ok(())
@@ -132,7 +132,7 @@ mod tests {
     fn export_import_roundtrip() {
         let state = make_unlocked_state();
         let fields = vec![
-            NewEntryField { field_name: "password".into(), field_value: "vault_pass".into(), sort_order: 0 },
+            NewEntryField { field_name: "password".into(), field_type: "password".into(), field_value: "vault_pass".into(), sort_order: 0 },
         ];
         create_entry_inner(None, "VaultEntry".into(), None, None, None,
             "password".into(), "[]".into(), None, false, fields, &state).unwrap();
