@@ -44,7 +44,7 @@ function FieldRow({
   };
 
   const commitEdit = async () => {
-    if (editValue === field.plaintext) { setEditing(false); return; }
+    if (saving || editValue === field.plaintext) { setEditing(false); return; }
     setSaving(true);
     try {
       await onSave(field.id, editValue);
@@ -170,19 +170,31 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
   };
 
   const handleFieldSave = async (fieldId: number, newValue: string) => {
+    const original = localFields;
     const updated = localFields.map(f =>
       f.id === fieldId ? { ...f, plaintext: newValue } : f
     );
     setLocalFields(updated);
-    await persistFields(updated);
-    toast.success("字段已更新");
+    try {
+      await persistFields(updated);
+      toast.success("字段已更新");
+    } catch (err) {
+      setLocalFields(original);
+      throw err;
+    }
   };
 
   const handleFieldDelete = async (fieldId: number) => {
+    const original = localFields;
     const updated = localFields.filter(f => f.id !== fieldId);
     setLocalFields(updated);
-    await persistFields(updated);
-    toast.success("字段已删除");
+    try {
+      await persistFields(updated);
+      toast.success("字段已删除");
+    } catch {
+      setLocalFields(original);
+      toast.error("删除失败");
+    }
   };
 
   const handleAddField = async () => {
