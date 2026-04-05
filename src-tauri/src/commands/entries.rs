@@ -104,7 +104,7 @@ pub fn get_entry_inner(id: i64, state: &AppState) -> AppResult<EntryDetail> {
     })?.map(|r| {
         let (fid, fname, ftype, value_bytes, nonce_opt, sort) = r.unwrap();
         let plaintext = if let Some(nonce_vec) = nonce_opt {
-            let nonce: [u8; 12] = nonce_vec.try_into().unwrap();
+            let nonce: [u8; 12] = nonce_vec.try_into().unwrap_or([0u8; 12]);
             let decrypted = decrypt(&key, &value_bytes, &nonce).unwrap_or_default();
             String::from_utf8_lossy(&decrypted).into_owned()
         } else {
@@ -305,6 +305,11 @@ mod tests {
         let pw_field = detail.fields.iter().find(|f| f.field_name == "password").unwrap();
         assert_eq!(pw_field.field_type, "password");
         assert_eq!(pw_field.plaintext, "s3cr3t");
+        let raw_nonce: Option<Vec<u8>> = state.db.lock().unwrap().query_row(
+            "SELECT nonce FROM entry_fields WHERE field_name='website'",
+            [], |r| r.get(0),
+        ).unwrap();
+        assert!(raw_nonce.is_none(), "url field should not have a nonce");
     }
 
     #[test]
