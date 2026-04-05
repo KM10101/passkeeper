@@ -37,8 +37,16 @@ export function EntryList({ groupId, selectedEntryId, onSelect, onNewEntry }: Pr
       {/* Entry cards */}
       <div className="flex-1 overflow-y-auto">
         {entries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-sm">
-            No entries
+          <div className="flex flex-col items-center justify-center h-32 gap-2 text-muted-foreground">
+            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+              <Plus className="h-5 w-5" />
+            </div>
+            <p className="text-sm">{search ? "无搜索结果" : "暂无条目"}</p>
+            {!search && (
+              <button onClick={onNewEntry} className="text-xs text-primary hover:underline">
+                创建第一条记录
+              </button>
+            )}
           </div>
         ) : (
           entries.map(entry => (

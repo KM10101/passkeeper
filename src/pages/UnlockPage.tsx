@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Moon, Sun, Lock } from "lucide-react";
+import { Moon, Sun, ShieldCheck } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -23,7 +23,7 @@ export function UnlockPage({ onUnlocked }: Props) {
       await unlockVault(password);
       onUnlocked();
     } catch {
-      setError("Invalid master password");
+      setError("密码错误，请重试");
     } finally {
       setLoading(false);
     }
@@ -32,37 +32,46 @@ export function UnlockPage({ onUnlocked }: Props) {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="absolute top-4 right-4">
-        <Button variant="ghost" size="icon" onClick={toggleTheme}>
+        <Button variant="ghost" size="icon" onClick={toggleTheme} title="Toggle theme">
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
       </div>
 
-      <div className="w-full max-w-sm flex flex-col gap-6">
-        <div className="flex flex-col items-center gap-2">
-          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-            <Lock className="h-6 w-6 text-primary-foreground" />
+      <div className="w-full max-w-sm flex flex-col gap-8">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
+            <ShieldCheck className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">PassKeeper</h1>
-          <p className="text-sm text-muted-foreground">Enter your master password to unlock</p>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold tracking-tight">PassKeeper</h1>
+            <p className="text-sm text-muted-foreground mt-1">输入主密码以解锁密码库</p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="password">Master Password</Label>
+            <Label htmlFor="password">主密码</Label>
             <Input
               id="password"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="Enter master password"
+              placeholder="••••••••"
               autoFocus
+              className="h-11"
             />
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Unlocking..." : "Unlock"}
+          {error && (
+            <p className="text-sm text-destructive text-center">{error}</p>
+          )}
+          <Button type="submit" disabled={loading} className="w-full h-11 text-base">
+            {loading ? "解锁中…" : "解锁"}
           </Button>
         </form>
+
+        <p className="text-center text-xs text-muted-foreground">
+          所有数据本地加密存储，从不上传
+        </p>
       </div>
     </div>
   );
