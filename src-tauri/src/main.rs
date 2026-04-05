@@ -70,6 +70,8 @@ fn main() {
             commands::vault_io::import_vault_from_path,
             commands::settings::get_settings,
             commands::settings::update_settings,
+            commands::settings::get_storage_dir,
+            commands::settings::migrate_storage,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
