@@ -33,8 +33,9 @@ pub fn init_db(conn: &Connection) -> AppResult<()> {
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             entry_id    INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
             field_name  TEXT    NOT NULL,
+            field_type  TEXT    NOT NULL DEFAULT 'secret',
             field_value BLOB    NOT NULL,
-            nonce       BLOB    NOT NULL,
+            nonce       BLOB,
             sort_order  INTEGER NOT NULL DEFAULT 0
         );
 

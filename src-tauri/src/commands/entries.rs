@@ -8,6 +8,7 @@ use crate::crypto::{encrypt, decrypt};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NewEntryField {
     pub field_name: String,
+    pub field_type: String,
     pub field_value: String,
     pub sort_order: i64,
 }
@@ -16,6 +17,7 @@ pub struct NewEntryField {
 pub struct DecryptedField {
     pub id: i64,
     pub field_name: String,
+    pub field_type: String,
     pub plaintext: String,
     pub sort_order: i64,
 }
@@ -24,6 +26,10 @@ pub struct DecryptedField {
 pub struct EntryDetail {
     pub entry: Entry,
     pub fields: Vec<DecryptedField>,
+}
+
+fn is_encrypted_type(field_type: &str) -> bool {
+    matches!(field_type, "password" | "secret" | "token")
 }
 
 fn get_key(state: &AppState) -> AppResult<[u8; 32]> {
@@ -46,8 +52,9 @@ pub fn list_entries_inner(
     }
     if favorite { sql.push_str(" AND favorite=1"); }
     if let Some(s) = search {
-        sql.push_str(" AND (title LIKE ? OR username LIKE ? OR url LIKE ?)");
+        sql.push_str(" AND (title LIKE ? OR username LIKE ? OR url LIKE ? OR tags LIKE ?)");
         let pat = format!("%{}%", s);
+        params.push(rusqlite::types::Value::Text(pat.clone()));
         params.push(rusqlite::types::Value::Text(pat.clone()));
         params.push(rusqlite::types::Value::Text(pat.clone()));
         params.push(rusqlite::types::Value::Text(pat));
@@ -82,21 +89,28 @@ pub fn get_entry_inner(id: i64, state: &AppState) -> AppResult<EntryDetail> {
     ).map_err(|_| AppError::NotFound)?;
 
     let mut stmt = db.prepare(
-        "SELECT id, field_name, field_value, nonce, sort_order \
+        "SELECT id, field_name, field_type, field_value, nonce, sort_order \
          FROM entry_fields WHERE entry_id=?1 ORDER BY sort_order"
     )?;
     let fields: Vec<DecryptedField> = stmt.query_map([id], |r| {
-        Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?,
-            r.get::<_, Vec<u8>>(2)?, r.get::<_, Vec<u8>>(3)?, r.get::<_, i64>(4)?))
+        Ok((
+            r.get::<_, i64>(0)?,
+            r.get::<_, String>(1)?,
+            r.get::<_, String>(2)?,
+            r.get::<_, Vec<u8>>(3)?,
+            r.get::<_, Option<Vec<u8>>>(4)?,
+            r.get::<_, i64>(5)?,
+        ))
     })?.map(|r| {
-        let (fid, fname, ct, nonce_vec, sort) = r.unwrap();
-        let nonce: [u8; 12] = nonce_vec.try_into().unwrap();
-        let plain = decrypt(&key, &ct, &nonce).unwrap_or_default();
-        DecryptedField {
-            id: fid, field_name: fname,
-            plaintext: String::from_utf8_lossy(&plain).into_owned(),
-            sort_order: sort,
-        }
+        let (fid, fname, ftype, value_bytes, nonce_opt, sort) = r.unwrap();
+        let plaintext = if let Some(nonce_vec) = nonce_opt {
+            let nonce: [u8; 12] = nonce_vec.try_into().unwrap();
+            let decrypted = decrypt(&key, &value_bytes, &nonce).unwrap_or_default();
+            String::from_utf8_lossy(&decrypted).into_owned()
+        } else {
+            String::from_utf8_lossy(&value_bytes).into_owned()
+        };
+        DecryptedField { id: fid, field_name: fname, field_type: ftype, plaintext, sort_order: sort }
     }).collect();
     Ok(EntryDetail { entry, fields })
 }
@@ -117,12 +131,20 @@ pub fn create_entry_inner(
     )?;
     let entry_id = db.last_insert_rowid();
     for f in &fields {
-        let (ct, nonce) = encrypt(&key, f.field_value.as_bytes())?;
-        db.execute(
-            "INSERT INTO entry_fields(entry_id,field_name,field_value,nonce,sort_order) \
-             VALUES(?1,?2,?3,?4,?5)",
-            rusqlite::params![entry_id, f.field_name, ct, nonce.to_vec(), f.sort_order],
-        )?;
+        if is_encrypted_type(&f.field_type) {
+            let (ct, nonce) = encrypt(&key, f.field_value.as_bytes())?;
+            db.execute(
+                "INSERT INTO entry_fields(entry_id,field_name,field_type,field_value,nonce,sort_order) \
+                 VALUES(?1,?2,?3,?4,?5,?6)",
+                rusqlite::params![entry_id, f.field_name, f.field_type, ct, nonce.to_vec(), f.sort_order],
+            )?;
+        } else {
+            db.execute(
+                "INSERT INTO entry_fields(entry_id,field_name,field_type,field_value,nonce,sort_order) \
+                 VALUES(?1,?2,?3,?4,NULL,?5)",
+                rusqlite::params![entry_id, f.field_name, f.field_type, f.field_value.as_bytes().to_vec(), f.sort_order],
+            )?;
+        }
     }
     let entry = db.query_row(
         "SELECT id, group_id, title, url, site_title, username, template_type, \
@@ -155,12 +177,20 @@ pub fn update_entry_inner(
     if rows == 0 { return Err(AppError::NotFound); }
     db.execute("DELETE FROM entry_fields WHERE entry_id=?1", [id])?;
     for f in &fields {
-        let (ct, nonce) = encrypt(&key, f.field_value.as_bytes())?;
-        db.execute(
-            "INSERT INTO entry_fields(entry_id,field_name,field_value,nonce,sort_order) \
-             VALUES(?1,?2,?3,?4,?5)",
-            rusqlite::params![id, f.field_name, ct, nonce.to_vec(), f.sort_order],
-        )?;
+        if is_encrypted_type(&f.field_type) {
+            let (ct, nonce) = encrypt(&key, f.field_value.as_bytes())?;
+            db.execute(
+                "INSERT INTO entry_fields(entry_id,field_name,field_type,field_value,nonce,sort_order) \
+                 VALUES(?1,?2,?3,?4,?5,?6)",
+                rusqlite::params![id, f.field_name, f.field_type, ct, nonce.to_vec(), f.sort_order],
+            )?;
+        } else {
+            db.execute(
+                "INSERT INTO entry_fields(entry_id,field_name,field_type,field_value,nonce,sort_order) \
+                 VALUES(?1,?2,?3,?4,NULL,?5)",
+                rusqlite::params![id, f.field_name, f.field_type, f.field_value.as_bytes().to_vec(), f.sort_order],
+            )?;
+        }
     }
     let entry = db.query_row(
         "SELECT id, group_id, title, url, site_title, username, template_type, \
@@ -241,7 +271,7 @@ mod tests {
     fn create_and_get_entry_decrypts_fields() {
         let state = make_unlocked_state();
         let fields = vec![
-            NewEntryField { field_name: "password".into(), field_value: "s3cr3t".into(), sort_order: 0 },
+            NewEntryField { field_name: "password".into(), field_type: "password".into(), field_value: "s3cr3t".into(), sort_order: 0 },
         ];
         let entry = create_entry_inner(
             None, "GitHub".into(), Some("https://github.com".into()),
@@ -252,7 +282,29 @@ mod tests {
         assert_eq!(detail.entry.title, "GitHub");
         assert_eq!(detail.fields.len(), 1);
         assert_eq!(detail.fields[0].field_name, "password");
+        assert_eq!(detail.fields[0].field_type, "password");
         assert_eq!(detail.fields[0].plaintext, "s3cr3t");
+    }
+
+    #[test]
+    fn plaintext_field_stored_without_nonce() {
+        let state = make_unlocked_state();
+        let fields = vec![
+            NewEntryField { field_name: "password".into(), field_type: "password".into(), field_value: "s3cr3t".into(), sort_order: 0 },
+            NewEntryField { field_name: "website".into(), field_type: "url".into(), field_value: "https://example.com".into(), sort_order: 1 },
+        ];
+        let entry = create_entry_inner(
+            None, "Test".into(), None, None, None,
+            "login".into(), "".into(), None, false, fields, &state,
+        ).unwrap();
+        let detail = get_entry_inner(entry.id, &state).unwrap();
+        assert_eq!(detail.fields.len(), 2);
+        let url_field = detail.fields.iter().find(|f| f.field_name == "website").unwrap();
+        assert_eq!(url_field.field_type, "url");
+        assert_eq!(url_field.plaintext, "https://example.com");
+        let pw_field = detail.fields.iter().find(|f| f.field_name == "password").unwrap();
+        assert_eq!(pw_field.field_type, "password");
+        assert_eq!(pw_field.plaintext, "s3cr3t");
     }
 
     #[test]

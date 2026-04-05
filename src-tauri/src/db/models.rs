@@ -31,8 +31,9 @@ pub struct EntryField {
     pub id: i64,
     pub entry_id: i64,
     pub field_name: String,
-    pub field_value: Vec<u8>, // AES-256-GCM ciphertext
-    pub nonce: Vec<u8>,       // 12-byte nonce
+    pub field_type: String,
+    pub field_value: Vec<u8>,
+    pub nonce: Option<Vec<u8>>,
     pub sort_order: i64,
 }
 
