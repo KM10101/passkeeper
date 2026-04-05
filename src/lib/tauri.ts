@@ -1,4 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
+import { open as shellOpen } from '@tauri-apps/plugin-shell';
+import { save as dialogSave, open as dialogOpen } from '@tauri-apps/plugin-dialog';
 
 export interface Group {
   id: number;
@@ -27,6 +29,7 @@ export interface Entry {
 export interface DecryptedField {
   id: number;
   field_name: string;
+  field_type: string;
   plaintext: string;
   sort_order: number;
 }
@@ -38,6 +41,7 @@ export interface EntryDetail {
 
 export interface NewEntryField {
   field_name: string;
+  field_type: string;
   field_value: string;
   sort_order: number;
 }
@@ -102,3 +106,18 @@ export const importVault = (data: number[], exportPassword: string) =>
 export const getSettings = () => invoke<AppSettings>('get_settings');
 export const updateSettings = (autoLockMinutes: number, showPasswordsByDefault: boolean) =>
   invoke<AppSettings>('update_settings', { autoLockMinutes, showPasswordsByDefault });
+
+// Shell
+export const openUrl = (url: string) => shellOpen(url);
+
+// Dialog
+export const saveFileDialog = (options?: { title?: string; filters?: Array<{ name: string; extensions: string[] }> }) =>
+  dialogSave(options);
+export const openFileDialog = (options?: { title?: string; filters?: Array<{ name: string; extensions: string[] }> }) =>
+  dialogOpen({ ...options, multiple: false }) as Promise<string | null>;
+
+// Vault IO – path-based
+export const exportVaultToPath = (path: string, exportPassword: string) =>
+  invoke<void>('export_vault_to_path', { path, exportPassword });
+export const importVaultFromPath = (path: string, exportPassword: string) =>
+  invoke<void>('import_vault_from_path', { path, exportPassword });
