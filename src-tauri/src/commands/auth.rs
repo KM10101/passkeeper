@@ -101,9 +101,11 @@ pub async fn change_master_password(
     OsRng.fill_bytes(&mut new_salt);
     let new_key = derive_key(&new_password, &new_salt)?;
 
-    // Re-encrypt all entry_fields
+    // Re-encrypt only encrypted fields (those with a nonce)
     let fields: Vec<(i64, Vec<u8>, Vec<u8>)> = {
-        let mut stmt = db.prepare("SELECT id, field_value, nonce FROM entry_fields")?;
+        let mut stmt = db.prepare(
+            "SELECT id, field_value, nonce FROM entry_fields WHERE nonce IS NOT NULL"
+        )?;
         stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
             .unwrap().map(|r| r.unwrap()).collect()
     };

@@ -12,6 +12,8 @@ pub enum AppError {
     Locked,
     #[error("Record not found")]
     NotFound,
+    #[error("同分组下已存在同名条目")]
+    DuplicateTitle,
     #[error("Invalid master password")]
     InvalidPassword,
     #[error("IO error: {0}")]

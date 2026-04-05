@@ -28,13 +28,15 @@ pub fn export_vault_inner(export_password: &str, state: &AppState) -> AppResult<
         }))?.map(|r| r.unwrap()).collect(); x
     };
     let entries: Vec<Entry> = {
-        let mut s = db.prepare("SELECT id,group_id,title,url,site_title,username,template_type,tags,notes,favorite,created_at,updated_at FROM entries")?;
+        let mut s = db.prepare("SELECT id,group_id,title,url,site_title,username,template_type,tags,notes,favorite,pinned,sort_order,created_at,updated_at FROM entries")?;
         let x = s.query_map([], |r| Ok(Entry {
             id: r.get(0)?, group_id: r.get(1)?, title: r.get(2)?,
             url: r.get(3)?, site_title: r.get(4)?, username: r.get(5)?,
             template_type: r.get(6)?, tags: r.get(7)?, notes: r.get(8)?,
             favorite: r.get::<_, i64>(9)? != 0,
-            created_at: r.get(10)?, updated_at: r.get(11)?,
+            pinned: r.get::<_, i64>(10)? != 0,
+            sort_order: r.get(11)?,
+            created_at: r.get(12)?, updated_at: r.get(13)?,
         }))?.map(|r| r.unwrap()).collect(); x
     };
     let fields: Vec<EntryField> = {

@@ -9,15 +9,38 @@ mod commands;
 use state::AppState;
 use db::init_db;
 
-fn main() {
-    let db_path = dirs::data_dir()
+fn get_default_db_path() -> std::path::PathBuf {
+    dirs::data_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
         .join("passkeeper")
-        .join("vault.db");
-    std::fs::create_dir_all(db_path.parent().unwrap()).unwrap();
-    let conn = rusqlite::Connection::open(&db_path).unwrap();
-    init_db(&conn).unwrap();
-    let app_state = AppState::new(conn, db_path);
+        .join("vault.db")
+}
+
+fn main() {
+    let default_path = get_default_db_path();
+    std::fs::create_dir_all(default_path.parent().unwrap()).unwrap();
+
+    // Open default DB first to read storage_dir config
+    let default_conn = rusqlite::Connection::open(&default_path).unwrap();
+    init_db(&default_conn).unwrap();
+
+    let storage_dir: Option<String> = default_conn.query_row(
+        "SELECT value FROM app_config WHERE key='storage_dir'",
+        [], |r| r.get::<_, String>(0),
+    ).ok().filter(|s| !s.is_empty());
+
+    let (active_conn, db_path) = if let Some(ref dir) = storage_dir {
+        let custom_path = std::path::PathBuf::from(dir).join("vault.db");
+        std::fs::create_dir_all(dir).unwrap();
+        let custom_conn = rusqlite::Connection::open(&custom_path).unwrap();
+        init_db(&custom_conn).unwrap();
+        drop(default_conn);
+        (custom_conn, custom_path)
+    } else {
+        (default_conn, default_path)
+    };
+
+    let app_state = AppState::new(active_conn, db_path);
 
     tauri::Builder::default()
         .manage(app_state)
@@ -37,6 +60,8 @@ fn main() {
             commands::entries::create_entry,
             commands::entries::update_entry,
             commands::entries::delete_entry,
+            commands::entries::pin_entry,
+            commands::entries::reorder_entries,
             commands::metadata::fetch_site_metadata,
             commands::metadata::get_favicon,
             commands::vault_io::export_vault,
