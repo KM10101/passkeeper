@@ -24,6 +24,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+let _nextFieldId = 1;
+const nextFieldId = () => _nextFieldId++;
+
 // ── Types ────────────────────────────────────────────────
 interface FieldRow {
   id: number;         // local key only
@@ -130,8 +133,8 @@ export function EntryDialog({ open, onClose, existing, defaultGroupId }: Props) 
       setTagsInput(existing.entry.tags);
       setGroupId(existing.entry.group_id);
       setFavorite(existing.entry.favorite);
-      setFields(existing.fields.map((f, i) => ({
-        id: i,
+      setFields(existing.fields.map((f) => ({
+        id: nextFieldId(),
         field_name: f.field_name,
         field_type: f.field_type,
         field_value: f.plaintext,
@@ -149,7 +152,7 @@ export function EntryDialog({ open, onClose, existing, defaultGroupId }: Props) 
 
   const addField = (field_name: string, field_type: string) => {
     setFields(prev => [...prev, {
-      id: Date.now() + Math.random(),
+      id: nextFieldId(),
       field_name,
       field_type,
       field_value: "",
@@ -158,8 +161,8 @@ export function EntryDialog({ open, onClose, existing, defaultGroupId }: Props) 
   };
 
   const applyTemplate = (tpl: typeof TEMPLATES[0]) => {
-    const newFields = tpl.fields.map((f, i) => ({
-      id: Date.now() + Math.random() + i,
+    const newFields = tpl.fields.map((f) => ({
+      id: nextFieldId(),
       field_name: f.field_name,
       field_type: f.field_type,
       field_value: "",
