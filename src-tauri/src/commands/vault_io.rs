@@ -25,6 +25,7 @@ pub fn export_vault_inner(export_password: &str, state: &AppState) -> AppResult<
         let x = s.query_map([], |r| Ok(Group {
             id: r.get(0)?, name: r.get(1)?, parent_id: r.get(2)?,
             icon: r.get(3)?, sort_order: r.get(4)?, created_at: r.get(5)?,
+            entry_count: 0,
         }))?.map(|r| r.unwrap()).collect(); x
     };
     let entries: Vec<Entry> = {

@@ -9,6 +9,7 @@ export interface Group {
   icon: string | null;
   sort_order: number;
   created_at: string;
+  entry_count: number;
 }
 
 export interface Entry {

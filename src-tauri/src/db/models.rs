@@ -8,6 +8,7 @@ pub struct Group {
     pub icon: Option<String>,
     pub sort_order: i64,
     pub created_at: String,
+    pub entry_count: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

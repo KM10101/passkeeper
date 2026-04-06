@@ -3,14 +3,36 @@ use crate::db::models::Group;
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
 
+fn query_group(db: &rusqlite::Connection, id: i64) -> rusqlite::Result<Group> {
+    db.query_row(
+        "SELECT g.id, g.name, g.parent_id, g.icon, g.sort_order, g.created_at,
+                COUNT(e.id) as entry_count
+         FROM groups g
+         LEFT JOIN entries e ON e.group_id = g.id
+         WHERE g.id = ?1",
+        [id],
+        |r| Ok(Group {
+            id: r.get(0)?, name: r.get(1)?, parent_id: r.get(2)?,
+            icon: r.get(3)?, sort_order: r.get(4)?, created_at: r.get(5)?,
+            entry_count: r.get(6)?,
+        }),
+    )
+}
+
 pub fn list_groups_inner(state: &AppState) -> AppResult<Vec<Group>> {
     let db = state.db.lock().unwrap();
     let mut stmt = db.prepare(
-        "SELECT id, name, parent_id, icon, sort_order, created_at FROM groups ORDER BY sort_order, name"
+        "SELECT g.id, g.name, g.parent_id, g.icon, g.sort_order, g.created_at,
+                COUNT(e.id) as entry_count
+         FROM groups g
+         LEFT JOIN entries e ON e.group_id = g.id
+         GROUP BY g.id
+         ORDER BY g.sort_order, g.name",
     )?;
     let groups = stmt.query_map([], |r| Ok(Group {
         id: r.get(0)?, name: r.get(1)?, parent_id: r.get(2)?,
         icon: r.get(3)?, sort_order: r.get(4)?, created_at: r.get(5)?,
+        entry_count: r.get(6)?,
     }))?.map(|r| r.unwrap()).collect();
     Ok(groups)
 }
@@ -25,14 +47,7 @@ pub fn create_group_inner(
         rusqlite::params![name, parent_id, icon, sort_order],
     )?;
     let id = db.last_insert_rowid();
-    let group = db.query_row(
-        "SELECT id, name, parent_id, icon, sort_order, created_at FROM groups WHERE id=?1",
-        [id], |r| Ok(Group {
-            id: r.get(0)?, name: r.get(1)?, parent_id: r.get(2)?,
-            icon: r.get(3)?, sort_order: r.get(4)?, created_at: r.get(5)?,
-        })
-    )?;
-    Ok(group)
+    Ok(query_group(&db, id)?)
 }
 
 pub fn update_group_inner(
@@ -45,14 +60,7 @@ pub fn update_group_inner(
         rusqlite::params![name, icon, sort_order, id],
     )?;
     if rows == 0 { return Err(AppError::NotFound); }
-    let group = db.query_row(
-        "SELECT id, name, parent_id, icon, sort_order, created_at FROM groups WHERE id=?1",
-        [id], |r| Ok(Group {
-            id: r.get(0)?, name: r.get(1)?, parent_id: r.get(2)?,
-            icon: r.get(3)?, sort_order: r.get(4)?, created_at: r.get(5)?,
-        })
-    )?;
-    Ok(group)
+    Ok(query_group(&db, id)?)
 }
 
 pub fn delete_group_inner(id: i64, state: &AppState) -> AppResult<()> {
@@ -110,9 +118,27 @@ mod tests {
         let state = make_state();
         let group = create_group_inner("Work", None, None, 0, &state).unwrap();
         assert_eq!(group.name, "Work");
+        assert_eq!(group.entry_count, 0);
         let groups = list_groups_inner(&state).unwrap();
         assert_eq!(groups.len(), 1);
         assert_eq!(groups[0].id, group.id);
+        assert_eq!(groups[0].entry_count, 0);
+    }
+
+    #[test]
+    fn list_groups_counts_entries() {
+        let state = make_state();
+        let g = create_group_inner("Dev", None, None, 0, &state).unwrap();
+        state.db.lock().unwrap().execute(
+            "INSERT INTO entries(group_id, title, template_type, tags) VALUES(?1,'e1','custom','[]')",
+            [g.id],
+        ).unwrap();
+        state.db.lock().unwrap().execute(
+            "INSERT INTO entries(group_id, title, template_type, tags) VALUES(?1,'e2','custom','[]')",
+            [g.id],
+        ).unwrap();
+        let groups = list_groups_inner(&state).unwrap();
+        assert_eq!(groups[0].entry_count, 2);
     }
 
     #[test]
