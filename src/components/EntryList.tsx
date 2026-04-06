@@ -91,7 +91,7 @@ export function EntryList({ groupId, selectedEntryId, onSelect, onNewEntry, onEd
       </div>
 
       {/* Entry list */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto bg-muted/40">
         {entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 gap-2 text-muted-foreground">
             <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
@@ -105,11 +105,11 @@ export function EntryList({ groupId, selectedEntryId, onSelect, onNewEntry, onEd
             )}
           </div>
         ) : (
-          <>
+          <div className="p-2 flex flex-col gap-2">
             {/* Pinned section */}
             {pinned.length > 0 && (
               <>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted/30">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted/30 mb-1">
                   <Pin className="h-3 w-3" /> 置顶
                 </div>
                 <DndContext sensors={sensors} collisionDetection={closestCenter}
@@ -135,7 +135,7 @@ export function EntryList({ groupId, selectedEntryId, onSelect, onNewEntry, onEd
             {normal.length > 0 && (
               <>
                 {pinned.length > 0 && (
-                  <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted/30">
+                  <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted/30 mb-1">
                     其他
                   </div>
                 )}
@@ -157,7 +157,7 @@ export function EntryList({ groupId, selectedEntryId, onSelect, onNewEntry, onEd
                 </DndContext>
               </>
             )}
-          </>
+          </div>
         )}
       </div>
 

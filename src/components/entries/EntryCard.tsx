@@ -32,8 +32,10 @@ export function EntryCard({ entry, selected, onClick, onEdit, onPin, onDelete }:
       ref={setNodeRef}
       style={style}
       className={cn(
-        "w-full text-left border-b border-border transition-colors flex items-stretch group",
-        selected ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-accent",
+        "w-full text-left rounded-lg border border-border bg-card shadow-sm transition-all flex items-stretch group",
+        selected
+          ? "border-primary ring-1 ring-primary/20 shadow-md"
+          : "hover:border-border/80 hover:shadow-md",
       )}
     >
       {/* Drag handle */}
