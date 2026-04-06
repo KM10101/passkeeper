@@ -147,18 +147,30 @@ function FieldRow({
       {/* Value area */}
       {editing ? (
         isMultilineEdit ? (
-          <Textarea
-            ref={textareaRef}
-            value={editValue}
-            onChange={e => setEditValue(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Escape') cancelEdit(); }}
-            className={cn(
-              'resize-y min-h-[60px] text-sm',
-              field.field_type !== 'markdown' && 'font-mono',
+          <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              value={editValue}
+              onChange={e => setEditValue(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Escape') cancelEdit(); }}
+              className={cn(
+                'resize-y min-h-[60px] text-sm',
+                field.field_type !== 'markdown' && 'font-mono',
+                isEncrypted ? 'pr-8' : '',
+              )}
+              style={isEncrypted && !show ? { WebkitTextSecurity: 'disc' } as React.CSSProperties : undefined}
+              disabled={saving}
+            />
+            {isEncrypted && (
+              <button
+                onClick={() => setShow(v => !v)}
+                className="absolute right-2 top-1.5 text-muted-foreground hover:text-foreground"
+                tabIndex={-1}
+              >
+                {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              </button>
             )}
-            style={isEncrypted && !show ? { WebkitTextSecurity: 'disc' } as React.CSSProperties : undefined}
-            disabled={saving}
-          />
+          </div>
         ) : (
           <Input
             ref={inputRef}
