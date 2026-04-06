@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Eye, EyeOff, Copy, Star, Pencil, Trash2, ExternalLink, Plus, Check } from "lucide-react";
+import { Eye, EyeOff, Copy, Star, Pencil, Trash2, ExternalLink, Plus, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -102,6 +102,34 @@ function FieldRow({
             </button>
           )}
           {!editing && (
+            <button
+              onClick={() => { setEditing(true); setEditValue(field.plaintext); }}
+              className="text-muted-foreground hover:text-foreground"
+              title="编辑"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {editing && (
+            <>
+              <button
+                onClick={commitEdit}
+                className="text-primary hover:text-primary/80"
+                disabled={saving}
+                title="保存"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={cancelEdit}
+                className="text-muted-foreground hover:text-foreground"
+                title="取消"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+          {!editing && (
             <button onClick={copy} className="text-muted-foreground hover:text-foreground">
               <Copy className="h-3.5 w-3.5" />
             </button>
@@ -122,7 +150,6 @@ function FieldRow({
             value={editValue}
             onChange={e => setEditValue(e.target.value)}
             onKeyDown={e => { if (e.key === 'Escape') cancelEdit(); }}
-            onBlur={commitEdit}
             className={cn(
               'resize-y min-h-[80px] text-sm',
               field.field_type !== 'markdown' && 'font-mono',
@@ -130,30 +157,22 @@ function FieldRow({
             disabled={saving}
           />
         ) : (
-          <div className="flex items-center gap-2">
-            <Input
-              ref={inputRef}
-              type={isEncrypted ? 'password' : 'text'}
-              value={editValue}
-              onChange={e => setEditValue(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') cancelEdit(); }}
-              onBlur={commitEdit}
-              className="h-7 text-sm flex-1"
-              disabled={saving}
-            />
-            <button onClick={cancelEdit} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
-          </div>
+          <Input
+            ref={inputRef}
+            type={isEncrypted ? 'password' : 'text'}
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') cancelEdit(); }}
+            className="h-7 text-sm"
+            disabled={saving}
+          />
         )
       ) : isRich && !rawView ? (
-        <div onClick={() => { setEditing(true); setEditValue(field.plaintext); }} className="cursor-text">
+        <div>
           <FieldRenderer fieldType={field.field_type} value={field.plaintext} />
         </div>
       ) : (
-        <span
-          className="text-sm break-all cursor-text hover:bg-accent/50 rounded px-1 -mx-1 transition-colors"
-          onClick={() => { setEditing(true); setEditValue(field.plaintext); }}
-          title="点击编辑"
-        >
+        <span className="text-sm break-all">
           {isEncrypted && !show
             ? '••••••••'
             : (field.plaintext || <span className="text-muted-foreground italic text-xs">空</span>)}
@@ -335,9 +354,24 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
-            <Input placeholder="值" value={newFieldValue} onChange={e => setNewFieldValue(e.target.value)}
-              className="flex-1 h-8 text-sm"
-              type={["password","secret","token"].includes(newFieldType) ? "password" : "text"} />
+            {RICH_TYPES.has(newFieldType) ? (
+              <Textarea
+                placeholder="值"
+                value={newFieldValue}
+                onChange={e => setNewFieldValue(e.target.value)}
+                className="flex-1 text-sm min-h-[80px] resize-y font-mono"
+                onKeyDown={e => { if (e.key === "Escape") setAddingField(false); }}
+              />
+            ) : (
+              <Input
+                placeholder="值"
+                value={newFieldValue}
+                onChange={e => setNewFieldValue(e.target.value)}
+                className="flex-1 h-8 text-sm"
+                type={["password","secret","token"].includes(newFieldType) ? "password" : "text"}
+                onKeyDown={e => { if (e.key === "Escape") setAddingField(false); }}
+              />
+            )}
             <button onClick={handleAddField} className="text-primary hover:text-primary/80">
               <Check className="h-4 w-4" />
             </button>
