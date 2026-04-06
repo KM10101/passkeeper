@@ -30,8 +30,8 @@ function GroupItem({
   selected: boolean;
   onSelect: () => void;
   onRename: (id: number, name: string, icon: string | null, sortOrder: number) => Promise<void>;
-  onDelete: (id: number) => Promise<void>;
-  onTogglePin: (id: number) => Promise<void>;
+  onDelete: (id: number) => Promise<unknown>;
+  onTogglePin: (id: number) => Promise<unknown>;
 }) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(group.name);
