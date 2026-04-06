@@ -103,7 +103,6 @@ function TemplateEditor({
     const fieldsJson = JSON.stringify(fields.map(f => ({ name: f.name, field_type: f.field_type })));
     setSaving(true);
     try { await onSave(name.trim(), fieldsJson); }
-    catch (e) { toast.error(`保存失败: ${e}`); }
     finally { setSaving(false); }
   };
 
