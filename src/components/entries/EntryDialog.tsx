@@ -7,10 +7,14 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Badge } from "../ui/badge";
 import { Switch } from "../ui/switch";
+import { Textarea } from "../ui/textarea";
 import { toast } from "sonner";
 import { useGroups } from "../../hooks/useGroups";
 import { useEntries } from "../../hooks/useEntries";
 import type { EntryDetail } from "../../lib/tauri";
+import { FieldTypeCombobox } from "../ui/field-type-combobox";
+import { RICH_TYPES } from "./FieldRenderer";
+import { cn } from "../../lib/utils";
 
 // ── Types ────────────────────────────────────────────────
 interface FieldRow {
@@ -23,17 +27,6 @@ interface FieldRow {
 }
 
 // ── Constants ────────────────────────────────────────────
-const FIELD_TYPES = [
-  { value: "text",     label: "Text" },
-  { value: "secret",   label: "Secret" },
-  { value: "token",    label: "Token" },
-  { value: "password", label: "Password" },
-  { value: "url",      label: "URL" },
-  { value: "email",    label: "Email" },
-  { value: "number",   label: "Number" },
-  { value: "date",     label: "Date" },
-];
-
 const ENCRYPTED_TYPES = new Set(["password", "secret", "token"]);
 
 const QUICK_ADD: Array<{ label: string; field_name: string; field_type: string }> = [
@@ -42,6 +35,9 @@ const QUICK_ADD: Array<{ label: string; field_name: string; field_type: string }
   { label: "URL",    field_name: "url",      field_type: "url" },
   { label: "Token",  field_name: "token",    field_type: "token" },
   { label: "邮箱",   field_name: "email",    field_type: "email" },
+  { label: "📝 笔记", field_name: "notes",   field_type: "markdown" },
+  { label: "💻 代码", field_name: "code",    field_type: "code" },
+  { label: "{} JSON", field_name: "data",   field_type: "json" },
 ];
 
 const TEMPLATES: Array<{ label: string; fields: Array<{ field_name: string; field_type: string }> }> = [
@@ -60,7 +56,7 @@ const TEMPLATES: Array<{ label: string; fields: Array<{ field_name: string; fiel
     { field_name: "expiry",      field_type: "date" },
   ]},
   { label: "笔记", fields: [
-    { field_name: "content", field_type: "text" },
+    { field_name: "content", field_type: "markdown" },
   ]},
 ];
 
@@ -261,15 +257,10 @@ export function EntryDialog({ open, onClose, existing, defaultGroupId }: Props) 
                         onChange={e => updateFieldName(field.id, e.target.value)}
                         className="w-[110px] shrink-0 text-sm h-8"
                       />
-                      <select
+                      <FieldTypeCombobox
                         value={field.field_type}
-                        onChange={e => updateFieldType(field.id, e.target.value)}
-                        className="h-8 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none w-[95px] shrink-0"
-                      >
-                        {FIELD_TYPES.map(t => (
-                          <option key={t.value} value={t.value}>{t.label}</option>
-                        ))}
-                      </select>
+                        onChange={v => updateFieldType(field.id, v)}
+                      />
                       <FieldValueInput
                         field={field}
                         onChange={v => updateFieldValue(field.id, v)}
@@ -398,6 +389,22 @@ export function EntryDialog({ open, onClose, existing, defaultGroupId }: Props) 
 function FieldValueInput({ field, onChange }: { field: FieldRow; onChange: (v: string) => void }) {
   const [show, setShow] = useState(false);
   const isSecret = ENCRYPTED_TYPES.has(field.field_type);
+  const isRich = RICH_TYPES.has(field.field_type);
+
+  if (isRich) {
+    return (
+      <Textarea
+        placeholder={`输入 ${field.field_type} 内容…`}
+        value={field.field_value}
+        onChange={e => onChange(e.target.value)}
+        className={cn(
+          'resize-y min-h-[80px] max-h-[200px] text-sm flex-1',
+          field.field_type !== 'markdown' && 'font-mono',
+          field.error ? 'border-destructive' : '',
+        )}
+      />
+    );
+  }
 
   return (
     <div className="relative flex-1">
