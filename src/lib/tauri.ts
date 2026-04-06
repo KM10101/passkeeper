@@ -8,6 +8,7 @@ export interface Group {
   parent_id: number | null;
   icon: string | null;
   sort_order: number;
+  is_pinned: boolean;
   created_at: number;
   entry_count: number;
 }
@@ -80,6 +81,10 @@ export const createGroup = (name: string, parentId: number | null, icon: string 
 export const updateGroup = (id: number, name: string, icon: string | null, sortOrder: number) =>
   invoke<Group>('update_group', { id, name, icon, sortOrder });
 export const deleteGroup = (id: number) => invoke<void>('delete_group', { id });
+export const toggleGroupPin = (id: number) =>
+  invoke<Group>('toggle_group_pin', { id });
+export const reorderGroups = (items: Array<{ id: number; sort_order: number }>) =>
+  invoke<void>('reorder_groups', { items });
 
 // Entries
 export const listEntries = (groupId?: number, search?: string, tags?: string, favorite?: boolean) =>
