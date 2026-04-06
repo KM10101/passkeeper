@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { FormEvent } from "react";
-import { Eye, EyeOff, Plus, Trash2 } from "lucide-react";
+import { Eye, EyeOff, GripVertical, Plus, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -15,6 +15,14 @@ import type { EntryDetail } from "../../lib/tauri";
 import { FieldTypeCombobox } from "../ui/field-type-combobox";
 import { RICH_TYPES } from "./FieldRenderer";
 import { cn } from "../../lib/utils";
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // ── Types ────────────────────────────────────────────────
 interface FieldRow {
@@ -101,6 +109,18 @@ export function EntryDialog({ open, onClose, existing, defaultGroupId }: Props) 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showMeta, setShowMeta] = useState(true);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleFieldDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setFields(prev => {
+      const oldIndex = prev.findIndex(f => f.id === active.id);
+      const newIndex = prev.findIndex(f => f.id === over.id);
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+  };
 
   // Reset form when dialog opens/changes
   useEffect(() => {
@@ -247,40 +267,22 @@ export function EntryDialog({ open, onClose, existing, defaultGroupId }: Props) 
                 暂无字段，使用下方按钮快速添加
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
-                {fields.map((field) => (
-                  <div key={field.id} className="flex flex-col gap-0.5">
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        placeholder="字段名"
-                        value={field.field_name}
-                        onChange={e => updateFieldName(field.id, e.target.value)}
-                        className="w-[110px] shrink-0 text-sm h-8"
-                      />
-                      <FieldTypeCombobox
-                        value={field.field_type}
-                        onChange={v => updateFieldType(field.id, v)}
-                      />
-                      <FieldValueInput
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleFieldDragEnd}>
+                <SortableContext items={fields.map(f => f.id)} strategy={verticalListSortingStrategy}>
+                  <div className="flex flex-col gap-2">
+                    {fields.map((field) => (
+                      <SortableFieldRow
+                        key={field.id}
                         field={field}
-                        onChange={v => updateFieldValue(field.id, v)}
+                        onChangeName={updateFieldName}
+                        onChangeType={updateFieldType}
+                        onChangeValue={updateFieldValue}
+                        onRemove={removeField}
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="shrink-0 h-8 w-8"
-                        onClick={() => removeField(field.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                      </Button>
-                    </div>
-                    {field.error && (
-                      <p className="text-xs text-destructive ml-1">{field.error}</p>
-                    )}
+                    ))}
                   </div>
-                ))}
-              </div>
+                </SortableContext>
+              </DndContext>
             )}
           </div>
 
@@ -440,6 +442,61 @@ function FieldValueInput({ field, onChange }: { field: FieldRow; onChange: (v: s
           {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
         </button>
       )}
+    </div>
+  );
+}
+
+// ── Sub-component: sortable field row with drag handle ──
+function SortableFieldRow({
+  field,
+  onChangeName,
+  onChangeType,
+  onChangeValue,
+  onRemove,
+}: {
+  field: FieldRow;
+  onChangeName: (id: number, name: string) => void;
+  onChangeType: (id: number, type: string) => void;
+  onChangeValue: (id: number, value: string) => void;
+  onRemove: (id: number) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: field.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex flex-col gap-0.5">
+      <div className="flex gap-2 items-center">
+        <button
+          type="button"
+          className="cursor-grab active:cursor-grabbing text-muted-foreground shrink-0"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <Input
+          placeholder="字段名"
+          value={field.field_name}
+          onChange={e => onChangeName(field.id, e.target.value)}
+          className="w-[110px] shrink-0 text-sm h-8"
+        />
+        <FieldTypeCombobox
+          value={field.field_type}
+          onChange={v => onChangeType(field.id, v)}
+        />
+        <FieldValueInput field={field} onChange={v => onChangeValue(field.id, v)} />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="shrink-0 h-8 w-8"
+          onClick={() => onRemove(field.id)}
+        >
+          <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+        </Button>
+      </div>
+      {field.error && <p className="text-xs text-destructive ml-1">{field.error}</p>}
     </div>
   );
 }
