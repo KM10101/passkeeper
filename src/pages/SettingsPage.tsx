@@ -8,6 +8,7 @@ import { Label } from "../components/ui/label";
 import { Switch } from "../components/ui/switch";
 import { TimezoneCombobox } from "../components/ui/TimezoneCombobox";
 import { cn } from "../lib/utils";
+import { TemplatesSettings } from '../components/settings/TemplatesSettings';
 import {
   getSettings, updateSettings, exportVaultToPath, importVaultFromPath,
   saveFileDialog, openFileDialog, getStorageDir, migrateStorage, openDirDialog,
@@ -31,6 +32,7 @@ export function SettingsPage({ onBack }: Props) {
   const [exportPassword, setExportPassword] = useState("");
   const [importPassword, setImportPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'templates'>('general');
 
   // Sync local state when settings load
   useEffect(() => {
@@ -119,6 +121,26 @@ export function SettingsPage({ onBack }: Props) {
         <h1 className="text-base font-semibold">设置</h1>
       </header>
 
+      {/* Tab bar */}
+      <div className="flex gap-0 border-b border-border px-6 shrink-0">
+        {(['general', 'templates'] as const).map(tab => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              "px-4 py-2.5 text-sm border-b-2 transition-colors",
+              activeTab === tab
+                ? "border-primary text-foreground font-medium"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {tab === 'general' ? '通用' : '模版'}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'general' && (
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-lg mx-auto px-6 py-8 flex flex-col gap-8">
 
@@ -257,6 +279,14 @@ export function SettingsPage({ onBack }: Props) {
 
         </div>
       </div>
+      )}
+      {activeTab === 'templates' && (
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-lg mx-auto px-6 py-8">
+            <TemplatesSettings />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
