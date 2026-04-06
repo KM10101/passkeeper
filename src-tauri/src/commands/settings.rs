@@ -11,6 +11,7 @@ pub struct AppSettings {
     pub http_proxy: String,
     pub no_proxy: String,
     pub storage_dir: String,
+    pub timezone: String,
 }
 
 fn read_config(db: &rusqlite::Connection, key: &str, default: &str) -> String {
@@ -39,6 +40,7 @@ pub fn get_settings_inner(state: &AppState) -> AppResult<AppSettings> {
         http_proxy: read_config(&db, "http_proxy", ""),
         no_proxy: read_config(&db, "no_proxy", ""),
         storage_dir: read_config(&db, "storage_dir", ""),
+        timezone: read_config(&db, "timezone", ""),
     })
 }
 
@@ -48,6 +50,7 @@ pub fn update_settings_inner(
     favicon_cache_expiry_days: i64,
     http_proxy: String,
     no_proxy: String,
+    timezone: String,
     state: &AppState,
 ) -> AppResult<AppSettings> {
     let db = state.db.lock().unwrap();
@@ -56,6 +59,7 @@ pub fn update_settings_inner(
     write_config(&db, "favicon_cache_expiry_days", &favicon_cache_expiry_days.to_string())?;
     write_config(&db, "http_proxy", &http_proxy)?;
     write_config(&db, "no_proxy", &no_proxy)?;
+    write_config(&db, "timezone", &timezone)?;
     drop(db);
     get_settings_inner(state)
 }
@@ -93,10 +97,11 @@ pub async fn update_settings(
     favicon_cache_expiry_days: i64,
     http_proxy: String,
     no_proxy: String,
+    timezone: String,
     state: State<'_, AppState>,
 ) -> Result<AppSettings, AppError> {
     update_settings_inner(auto_lock_minutes, show_passwords_by_default,
-        favicon_cache_expiry_days, http_proxy, no_proxy, &state)
+        favicon_cache_expiry_days, http_proxy, no_proxy, timezone, &state)
 }
 
 #[tauri::command]
@@ -141,6 +146,7 @@ mod tests {
             10, true, 14,
             "http://127.0.0.1:7890".into(),
             "localhost,127.0.0.1".into(),
+            "".into(),
             &state,
         ).unwrap();
         assert_eq!(updated.auto_lock_minutes, 10);

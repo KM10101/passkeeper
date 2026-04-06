@@ -268,7 +268,7 @@ pub fn update_entry_inner(
 
     let rows = db.execute(
         "UPDATE entries SET group_id=?1,title=?2,url=?3,site_title=?4,username=?5,\
-         template_type='custom',tags=?6,notes=?7,favorite=?8,updated_at=datetime('now') WHERE id=?9",
+         template_type='custom',tags=?6,notes=?7,favorite=?8,updated_at=unixepoch() WHERE id=?9",
         rusqlite::params![group_id, title, url, site_title, username,
             tags, notes, favorite as i64, id],
     )?;
@@ -297,7 +297,7 @@ pub fn pin_entry_inner(id: i64, pinned: bool, state: &AppState) -> AppResult<Ent
     ).unwrap_or(0);
 
     let rows = db.execute(
-        "UPDATE entries SET pinned=?1, sort_order=?2, updated_at=datetime('now') WHERE id=?3",
+        "UPDATE entries SET pinned=?1, sort_order=?2, updated_at=unixepoch() WHERE id=?3",
         rusqlite::params![pinned as i64, next_sort, id],
     )?;
     if rows == 0 { return Err(AppError::NotFound); }

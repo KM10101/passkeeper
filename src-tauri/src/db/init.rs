@@ -11,7 +11,7 @@ pub fn init_db(conn: &Connection) -> AppResult<()> {
             parent_id   INTEGER REFERENCES groups(id) ON DELETE SET NULL,
             icon        TEXT,
             sort_order  INTEGER NOT NULL DEFAULT 0,
-            created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+            created_at  INTEGER NOT NULL DEFAULT (unixepoch())
         );
 
         CREATE TABLE IF NOT EXISTS entries (
@@ -27,8 +27,8 @@ pub fn init_db(conn: &Connection) -> AppResult<()> {
             favorite      INTEGER NOT NULL DEFAULT 0,
             pinned        INTEGER NOT NULL DEFAULT 0,
             sort_order    INTEGER NOT NULL DEFAULT 0,
-            created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
-            updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+            created_at    INTEGER NOT NULL DEFAULT (unixepoch()),
+            updated_at    INTEGER NOT NULL DEFAULT (unixepoch())
         );
 
         CREATE TABLE IF NOT EXISTS entry_fields (

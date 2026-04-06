@@ -7,7 +7,7 @@ pub struct Group {
     pub parent_id: Option<i64>,
     pub icon: Option<String>,
     pub sort_order: i64,
-    pub created_at: String,
+    pub created_at: i64,
     pub entry_count: i64,
 }
 
@@ -25,8 +25,8 @@ pub struct Entry {
     pub favorite: bool,
     pub pinned: bool,
     pub sort_order: i64,
-    pub created_at: String,
-    pub updated_at: String,
+    pub created_at: i64,
+    pub updated_at: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

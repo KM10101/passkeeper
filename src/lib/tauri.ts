@@ -8,7 +8,7 @@ export interface Group {
   parent_id: number | null;
   icon: string | null;
   sort_order: number;
-  created_at: string;
+  created_at: number;
   entry_count: number;
 }
 
@@ -25,8 +25,8 @@ export interface Entry {
   favorite: boolean;
   pinned: boolean;
   sort_order: number;
-  created_at: string;
-  updated_at: string;
+  created_at: number;
+  updated_at: number;
 }
 
 export interface DecryptedField {
@@ -56,6 +56,7 @@ export interface AppSettings {
   http_proxy: string;
   no_proxy: string;
   storage_dir: string;
+  timezone: string;
 }
 
 export interface SiteMetadata {
@@ -121,9 +122,10 @@ export const updateSettings = (
   faviconCacheExpiryDays: number,
   httpProxy: string,
   noProxy: string,
+  timezone: string,
 ) => invoke<AppSettings>('update_settings', {
   autoLockMinutes, showPasswordsByDefault,
-  faviconCacheExpiryDays, httpProxy, noProxy,
+  faviconCacheExpiryDays, httpProxy, noProxy, timezone,
 });
 
 export const getStorageDir = () => invoke<string>('get_storage_dir');

@@ -23,6 +23,7 @@ export function SettingsPage({ onBack }: Props) {
   const [faviconExpiry, setFaviconExpiry] = useState(7);
   const [httpProxy, setHttpProxy] = useState("");
   const [noProxy, setNoProxy] = useState("");
+  const [timezone, setTimezone] = useState("");
   const [storageDirInput, setStorageDirInput] = useState("");
   const [exportPassword, setExportPassword] = useState("");
   const [importPassword, setImportPassword] = useState("");
@@ -36,10 +37,11 @@ export function SettingsPage({ onBack }: Props) {
     setFaviconExpiry(settings.favicon_cache_expiry_days);
     setHttpProxy(settings.http_proxy);
     setNoProxy(settings.no_proxy);
+    setTimezone(settings.timezone ?? "");
   }, [settings]);
 
   const saveSettings = useMutation({
-    mutationFn: () => updateSettings(autoLock, showPw, faviconExpiry, httpProxy, noProxy),
+    mutationFn: () => updateSettings(autoLock, showPw, faviconExpiry, httpProxy, noProxy, timezone),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["settings"] });
       toast.success("设置已保存");
@@ -164,6 +166,16 @@ export function SettingsPage({ onBack }: Props) {
                 <Input id="no-proxy" value={noProxy} onChange={e => setNoProxy(e.target.value)}
                   placeholder="localhost,127.0.0.1,.internal.com" />
                 <p className="text-xs text-muted-foreground">逗号分隔，支持 .domain.com 通配</p>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="timezone" className="text-sm font-medium">时区</Label>
+                <Input
+                  id="timezone"
+                  value={timezone}
+                  onChange={e => setTimezone(e.target.value)}
+                  placeholder="留空使用系统时区（如 Asia/Shanghai）"
+                  className="h-8 text-sm"
+                />
               </div>
               <div className="flex justify-end">
                 <Button size="sm" onClick={() => saveSettings.mutate()} disabled={saveSettings.isPending}>

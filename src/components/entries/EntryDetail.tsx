@@ -10,7 +10,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from "../ui/alert-dialog";
 import { useEntries } from "../../hooks/useEntries";
-import { getEntry, openUrl } from "../../lib/tauri";
+import { getEntry, openUrl, getSettings } from "../../lib/tauri";
 import type { DecryptedField, NewEntryField } from "../../lib/tauri";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FieldRenderer, RICH_TYPES } from './FieldRenderer';
@@ -18,11 +18,12 @@ import { cn } from '../../lib/utils';
 
 const ENCRYPTED_TYPES = new Set(["password", "secret", "token"]);
 
-function formatDate(iso: string): string {
+function formatDate(ts: number, timezone?: string): string {
   return new Intl.DateTimeFormat("zh-CN", {
     year: "numeric", month: "long", day: "numeric",
     hour: "2-digit", minute: "2-digit",
-  }).format(new Date(iso));
+    ...(timezone ? { timeZone: timezone } : {}),
+  }).format(new Date(ts * 1000));
 }
 
 function FieldRow({
@@ -195,6 +196,7 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
     queryKey: ["entry", entryId],
     queryFn: () => getEntry(entryId),
   });
+  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: getSettings });
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [localFields, setLocalFields] = useState<DecryptedField[]>([]);
   const [rawFields, setRawFields] = useState<Set<number>>(new Set());
@@ -388,8 +390,8 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
 
         {/* Timestamps */}
         <div className="flex gap-4 text-xs text-muted-foreground mt-auto pt-4 border-t border-border">
-          <span>创建于 {formatDate(entry.created_at)}</span>
-          <span>更新于 {formatDate(entry.updated_at)}</span>
+          <span>创建于 {formatDate(entry.created_at, settings?.timezone || undefined)}</span>
+          <span>更新于 {formatDate(entry.updated_at, settings?.timezone || undefined)}</span>
         </div>
       </div>
 
