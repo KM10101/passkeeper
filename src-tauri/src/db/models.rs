@@ -7,6 +7,7 @@ pub struct Group {
     pub parent_id: Option<i64>,
     pub icon: Option<String>,
     pub sort_order: i64,
+    pub is_pinned: bool,
     pub created_at: i64,
     pub entry_count: i64,
 }

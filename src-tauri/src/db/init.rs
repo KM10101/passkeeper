@@ -52,6 +52,19 @@ pub fn init_db(conn: &Connection) -> AppResult<()> {
             value       TEXT NOT NULL
         );
     ")?;
+
+    // Migration: add is_pinned to groups if missing
+    if conn.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info('groups') WHERE name='is_pinned'",
+        [],
+        |r| r.get::<_, i64>(0),
+    ).unwrap_or(0) == 0 {
+        conn.execute(
+            "ALTER TABLE groups ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0",
+            [],
+        )?;
+    }
+
     Ok(())
 }
 

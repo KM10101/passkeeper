@@ -55,6 +55,8 @@ fn main() {
             commands::groups::create_group,
             commands::groups::update_group,
             commands::groups::delete_group,
+            commands::groups::toggle_group_pin,
+            commands::groups::reorder_groups,
             commands::entries::list_entries,
             commands::entries::get_entry,
             commands::entries::create_entry,

@@ -21,10 +21,12 @@ pub fn export_vault_inner(export_password: &str, state: &AppState) -> AppResult<
     let db = state.db.lock().unwrap();
 
     let groups: Vec<Group> = {
-        let mut s = db.prepare("SELECT id,name,parent_id,icon,sort_order,created_at FROM groups")?;
+        let mut s = db.prepare("SELECT id,name,parent_id,icon,sort_order,is_pinned,created_at FROM groups")?;
         let x = s.query_map([], |r| Ok(Group {
             id: r.get(0)?, name: r.get(1)?, parent_id: r.get(2)?,
-            icon: r.get(3)?, sort_order: r.get(4)?, created_at: r.get(5)?,
+            icon: r.get(3)?, sort_order: r.get(4)?,
+            is_pinned: r.get::<_, i64>(5)? != 0,
+            created_at: r.get(6)?,
             entry_count: 0,
         }))?.map(|r| r.unwrap()).collect(); x
     };
