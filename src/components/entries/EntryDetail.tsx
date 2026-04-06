@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
@@ -12,6 +13,8 @@ import { useEntries } from "../../hooks/useEntries";
 import { getEntry, openUrl } from "../../lib/tauri";
 import type { DecryptedField, NewEntryField } from "../../lib/tauri";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { FieldRenderer, RICH_TYPES } from './FieldRenderer';
+import { cn } from '../../lib/utils';
 
 const ENCRYPTED_TYPES = new Set(["password", "secret", "token"]);
 
@@ -23,22 +26,33 @@ function formatDate(iso: string): string {
 }
 
 function FieldRow({
-  field, onSave, onDelete, canDelete,
+  field, onSave, onDelete, canDelete, rawView, onToggleRaw,
 }: {
   field: DecryptedField;
   onSave: (id: number, newValue: string) => Promise<void>;
   onDelete: (id: number) => void;
   canDelete: boolean;
+  rawView: boolean;
+  onToggleRaw: () => void;
 }) {
   const [show, setShow] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(field.plaintext);
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isEncrypted = ENCRYPTED_TYPES.has(field.field_type);
   const isUrl = field.field_type === "url";
+  const isRich = RICH_TYPES.has(field.field_type);
 
-  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+  useEffect(() => {
+    if (!editing) return;
+    if (isRich) {
+      textareaRef.current?.focus();
+    } else {
+      inputRef.current?.focus();
+    }
+  }, [editing, isRich]);
 
   const copy = () => {
     navigator.clipboard.writeText(field.plaintext);
@@ -61,55 +75,90 @@ function FieldRow({
   const cancelEdit = () => { setEditValue(field.plaintext); setEditing(false); };
 
   return (
-    <div className="flex flex-col gap-0.5 py-2 border-b border-border last:border-0">
-      <span className="text-xs text-muted-foreground capitalize">{field.field_name}
-        <span className="ml-1 text-[10px] opacity-50">{field.field_type}</span>
-      </span>
-      <div className="flex items-center gap-2">
-        {editing ? (
-          <>
+    <div className="rounded-lg border border-border bg-muted/20 p-3 flex flex-col gap-1.5">
+      {/* Header: field name + type + action buttons */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-muted-foreground capitalize flex-1">
+          {field.field_name}
+          <span className="ml-1 text-[10px] opacity-50">{field.field_type}</span>
+        </span>
+        <div className="flex items-center gap-1">
+          {isRich && !editing && (
+            <button
+              onClick={onToggleRaw}
+              className="text-[10px] px-1.5 py-0.5 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {rawView ? '渲染' : '原始'}
+            </button>
+          )}
+          {!editing && isEncrypted && (
+            <button onClick={() => setShow(v => !v)} className="text-muted-foreground hover:text-foreground">
+              {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            </button>
+          )}
+          {!editing && isUrl && field.plaintext && (
+            <button onClick={() => openUrl(field.plaintext)} className="text-muted-foreground hover:text-foreground">
+              <ExternalLink className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {!editing && (
+            <button onClick={copy} className="text-muted-foreground hover:text-foreground">
+              <Copy className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {canDelete && !editing && (
+            <button onClick={() => onDelete(field.id)} className="text-muted-foreground hover:text-destructive">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Value area */}
+      {editing ? (
+        isRich ? (
+          <Textarea
+            ref={textareaRef}
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape') cancelEdit(); }}
+            onBlur={commitEdit}
+            className={cn(
+              'resize-y min-h-[80px] text-sm',
+              field.field_type !== 'markdown' && 'font-mono',
+            )}
+            disabled={saving}
+          />
+        ) : (
+          <div className="flex items-center gap-2">
             <Input
               ref={inputRef}
-              type={isEncrypted ? "password" : "text"}
+              type={isEncrypted ? 'password' : 'text'}
               value={editValue}
               onChange={e => setEditValue(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") cancelEdit(); }}
+              onKeyDown={e => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') cancelEdit(); }}
               onBlur={commitEdit}
               className="h-7 text-sm flex-1"
               disabled={saving}
             />
             <button onClick={cancelEdit} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
-          </>
-        ) : (
-          <>
-            <span
-              className="text-sm flex-1 break-all font-mono cursor-text hover:bg-accent/50 rounded px-1 -mx-1 transition-colors"
-              onClick={() => { setEditing(true); setEditValue(field.plaintext); }}
-              title="点击编辑"
-            >
-              {isEncrypted && !show ? "••••••••" : (field.plaintext || <span className="text-muted-foreground italic text-xs">空</span>)}
-            </span>
-            {isEncrypted && (
-              <button onClick={() => setShow(v => !v)} className="text-muted-foreground hover:text-foreground shrink-0">
-                {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-              </button>
-            )}
-            {isUrl && field.plaintext && (
-              <button onClick={() => openUrl(field.plaintext)} className="text-muted-foreground hover:text-foreground shrink-0">
-                <ExternalLink className="h-3.5 w-3.5" />
-              </button>
-            )}
-            <button onClick={copy} className="text-muted-foreground hover:text-foreground shrink-0">
-              <Copy className="h-3.5 w-3.5" />
-            </button>
-            {canDelete && (
-              <button onClick={() => onDelete(field.id)} className="text-muted-foreground hover:text-destructive shrink-0">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </>
-        )}
-      </div>
+          </div>
+        )
+      ) : isRich && !rawView ? (
+        <div onClick={() => { setEditing(true); setEditValue(field.plaintext); }} className="cursor-text">
+          <FieldRenderer fieldType={field.field_type} value={field.plaintext} />
+        </div>
+      ) : (
+        <span
+          className="text-sm break-all cursor-text hover:bg-accent/50 rounded px-1 -mx-1 transition-colors"
+          onClick={() => { setEditing(true); setEditValue(field.plaintext); }}
+          title="点击编辑"
+        >
+          {isEncrypted && !show
+            ? '••••••••'
+            : (field.plaintext || <span className="text-muted-foreground italic text-xs">空</span>)}
+        </span>
+      )}
     </div>
   );
 }
@@ -129,10 +178,17 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
   });
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [localFields, setLocalFields] = useState<DecryptedField[]>([]);
+  const [rawFields, setRawFields] = useState<Set<number>>(new Set());
   const [addingField, setAddingField] = useState(false);
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldType, setNewFieldType] = useState("text");
   const [newFieldValue, setNewFieldValue] = useState("");
+
+  const toggleRaw = (fieldId: number) => setRawFields(prev => {
+    const next = new Set(prev);
+    next.has(fieldId) ? next.delete(fieldId) : next.add(fieldId);
+    return next;
+  });
 
   useEffect(() => { if (detail) setLocalFields(detail.fields); }, [detail]);
 
@@ -253,9 +309,17 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
         )}
 
         {/* Fields */}
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-2">
           {localFields.map(f => (
-            <FieldRow key={f.id} field={f} onSave={handleFieldSave} onDelete={handleFieldDelete} canDelete />
+            <FieldRow
+              key={f.id}
+              field={f}
+              onSave={handleFieldSave}
+              onDelete={handleFieldDelete}
+              canDelete
+              rawView={rawFields.has(f.id)}
+              onToggleRaw={() => toggleRaw(f.id)}
+            />
           ))}
         </div>
 
@@ -267,7 +331,7 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
               onKeyDown={e => { if (e.key === "Escape") setAddingField(false); }} />
             <select value={newFieldType} onChange={e => setNewFieldType(e.target.value)}
               className="h-8 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none w-[95px] shrink-0">
-              {["text","secret","token","password","url","email","number","date"].map(t => (
+              {["text","secret","token","password","url","email","number","date","markdown","code","json","yaml"].map(t => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
