@@ -6,6 +6,9 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Switch } from "../components/ui/switch";
+import { TimezoneCombobox } from "../components/ui/TimezoneCombobox";
+import { cn } from "../lib/utils";
+import { TemplatesSettings } from '../components/settings/TemplatesSettings';
 import {
   getSettings, updateSettings, exportVaultToPath, importVaultFromPath,
   saveFileDialog, openFileDialog, getStorageDir, migrateStorage, openDirDialog,
@@ -23,11 +26,13 @@ export function SettingsPage({ onBack }: Props) {
   const [faviconExpiry, setFaviconExpiry] = useState(7);
   const [httpProxy, setHttpProxy] = useState("");
   const [noProxy, setNoProxy] = useState("");
+  const [proxyEnabled, setProxyEnabled] = useState(false);
   const [timezone, setTimezone] = useState("");
   const [storageDirInput, setStorageDirInput] = useState("");
   const [exportPassword, setExportPassword] = useState("");
   const [importPassword, setImportPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'templates'>('general');
 
   // Sync local state when settings load
   useEffect(() => {
@@ -37,11 +42,12 @@ export function SettingsPage({ onBack }: Props) {
     setFaviconExpiry(settings.favicon_cache_expiry_days);
     setHttpProxy(settings.http_proxy);
     setNoProxy(settings.no_proxy);
+    setProxyEnabled(settings.proxy_enabled);
     setTimezone(settings.timezone ?? "");
   }, [settings]);
 
   const saveSettings = useMutation({
-    mutationFn: () => updateSettings(autoLock, showPw, faviconExpiry, httpProxy, noProxy, timezone),
+    mutationFn: () => updateSettings(autoLock, showPw, faviconExpiry, httpProxy, noProxy, proxyEnabled, timezone),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["settings"] });
       toast.success("设置已保存");
@@ -51,8 +57,12 @@ export function SettingsPage({ onBack }: Props) {
 
   const handleExport = async () => {
     if (!exportPassword) { toast.error("请输入导出密码"); return; }
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
     const path = await saveFileDialog({
       title: "导出备份",
+      defaultPath: `passkeeper-${ts}.pkv`,
       filters: [{ name: "PassKeeper Vault", extensions: ["pkv"] }],
     });
     if (!path) return;
@@ -111,6 +121,26 @@ export function SettingsPage({ onBack }: Props) {
         <h1 className="text-base font-semibold">设置</h1>
       </header>
 
+      {/* Tab bar */}
+      <div className="flex gap-0 border-b border-border px-6 shrink-0">
+        {(['general', 'templates'] as const).map(tab => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              "px-4 py-2.5 text-sm border-b-2 transition-colors",
+              activeTab === tab
+                ? "border-primary text-foreground font-medium"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {tab === 'general' ? '通用' : '模版'}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'general' && (
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-lg mx-auto px-6 py-8 flex flex-col gap-8">
 
@@ -156,12 +186,19 @@ export function SettingsPage({ onBack }: Props) {
                   <span className="text-sm text-muted-foreground">天</span>
                 </div>
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="proxy-enabled" className="text-sm font-medium">启用代理</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">开启后使用下方代理设置</p>
+                </div>
+                <Switch id="proxy-enabled" checked={proxyEnabled} onCheckedChange={setProxyEnabled} />
+              </div>
+              <div className={cn("flex flex-col gap-1.5", !proxyEnabled && "opacity-50 pointer-events-none")}>
                 <Label htmlFor="http-proxy" className="text-sm font-medium">HTTP 代理</Label>
                 <Input id="http-proxy" value={httpProxy} onChange={e => setHttpProxy(e.target.value)}
                   placeholder="http://127.0.0.1:7890" />
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className={cn("flex flex-col gap-1.5", !proxyEnabled && "opacity-50 pointer-events-none")}>
                 <Label htmlFor="no-proxy" className="text-sm font-medium">不走代理</Label>
                 <Input id="no-proxy" value={noProxy} onChange={e => setNoProxy(e.target.value)}
                   placeholder="localhost,127.0.0.1,.internal.com" />
@@ -169,13 +206,7 @@ export function SettingsPage({ onBack }: Props) {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="timezone" className="text-sm font-medium">时区</Label>
-                <Input
-                  id="timezone"
-                  value={timezone}
-                  onChange={e => setTimezone(e.target.value)}
-                  placeholder="留空使用系统时区（如 Asia/Shanghai）"
-                  className="h-8 text-sm"
-                />
+                <TimezoneCombobox value={timezone} onChange={setTimezone} />
               </div>
               <div className="flex justify-end">
                 <Button size="sm" onClick={() => saveSettings.mutate()} disabled={saveSettings.isPending}>
@@ -248,6 +279,14 @@ export function SettingsPage({ onBack }: Props) {
 
         </div>
       </div>
+      )}
+      {activeTab === 'templates' && (
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-lg mx-auto px-6 py-8">
+            <TemplatesSettings />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

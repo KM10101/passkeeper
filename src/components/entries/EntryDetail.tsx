@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Eye, EyeOff, Copy, Star, Pencil, Trash2, ExternalLink, Plus, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
@@ -45,15 +45,16 @@ function FieldRow({
   const isEncrypted = ENCRYPTED_TYPES.has(field.field_type);
   const isUrl = field.field_type === "url";
   const isRich = RICH_TYPES.has(field.field_type);
+  const isMultilineEdit = isRich || field.field_type === 'text' || field.field_type === 'secret';
 
   useEffect(() => {
     if (!editing) return;
-    if (isRich) {
+    if (isMultilineEdit) {
       textareaRef.current?.focus();
     } else {
       inputRef.current?.focus();
     }
-  }, [editing, isRich]);
+  }, [editing, isMultilineEdit]);
 
   const copy = () => {
     navigator.clipboard.writeText(field.plaintext);
@@ -145,18 +146,31 @@ function FieldRow({
 
       {/* Value area */}
       {editing ? (
-        isRich ? (
-          <Textarea
-            ref={textareaRef}
-            value={editValue}
-            onChange={e => setEditValue(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Escape') cancelEdit(); }}
-            className={cn(
-              'resize-y min-h-[80px] text-sm',
-              field.field_type !== 'markdown' && 'font-mono',
+        isMultilineEdit ? (
+          <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              value={editValue}
+              onChange={e => setEditValue(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Escape') cancelEdit(); }}
+              className={cn(
+                'resize-y min-h-[60px] text-sm',
+                field.field_type !== 'markdown' && 'font-mono',
+                isEncrypted ? 'pr-8' : '',
+              )}
+              style={isEncrypted && !show ? { WebkitTextSecurity: 'disc' } as React.CSSProperties : undefined}
+              disabled={saving}
+            />
+            {isEncrypted && (
+              <button
+                onClick={() => setShow(v => !v)}
+                className="absolute right-2 top-1.5 text-muted-foreground hover:text-foreground"
+                tabIndex={-1}
+              >
+                {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              </button>
             )}
-            disabled={saving}
-          />
+          </div>
         ) : (
           <Input
             ref={inputRef}
@@ -204,6 +218,7 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldType, setNewFieldType] = useState("text");
   const [newFieldValue, setNewFieldValue] = useState("");
+  const [showNewValue, setShowNewValue] = useState(false);
 
   const toggleRaw = (fieldId: number) => setRawFields(prev => {
     const next = new Set(prev);
@@ -273,7 +288,7 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
     const updated = [...localFields, newField];
     setLocalFields(updated);
     await persistFields(updated);
-    setNewFieldName(""); setNewFieldType("text"); setNewFieldValue(""); setAddingField(false);
+    setNewFieldName(""); setNewFieldType("text"); setNewFieldValue(""); setShowNewValue(false); setAddingField(false);
     toast.success("字段已添加");
   };
 
@@ -356,28 +371,43 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
-            {RICH_TYPES.has(newFieldType) ? (
-              <Textarea
-                placeholder="值"
-                value={newFieldValue}
-                onChange={e => setNewFieldValue(e.target.value)}
-                className="flex-1 text-sm min-h-[80px] resize-y font-mono"
-                onKeyDown={e => { if (e.key === "Escape") setAddingField(false); }}
-              />
+            {RICH_TYPES.has(newFieldType) || newFieldType === 'text' || newFieldType === 'secret' ? (
+              <div className="flex-1 relative">
+                <Textarea
+                  placeholder="值"
+                  value={newFieldValue}
+                  onChange={e => setNewFieldValue(e.target.value)}
+                  className={cn(
+                    'w-full text-sm min-h-[80px] resize-y',
+                    !RICH_TYPES.has(newFieldType) && 'font-mono',
+                  )}
+                  style={newFieldType === 'secret' && !showNewValue ? { WebkitTextSecurity: 'disc' } as React.CSSProperties : undefined}
+                  onKeyDown={e => { if (e.key === "Escape") setAddingField(false); }}
+                />
+                {newFieldType === 'secret' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowNewValue(v => !v)}
+                    className="absolute top-1 right-1 text-muted-foreground hover:text-foreground"
+                  >
+                    {showNewValue ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                )}
+              </div>
             ) : (
               <Input
                 placeholder="值"
                 value={newFieldValue}
                 onChange={e => setNewFieldValue(e.target.value)}
                 className="flex-1 h-8 text-sm"
-                type={["password","secret","token"].includes(newFieldType) ? "password" : "text"}
+                type={["password","token"].includes(newFieldType) ? "password" : "text"}
                 onKeyDown={e => { if (e.key === "Escape") setAddingField(false); }}
               />
             )}
             <button onClick={handleAddField} className="text-primary hover:text-primary/80">
               <Check className="h-4 w-4" />
             </button>
-            <button onClick={() => setAddingField(false)} className="text-muted-foreground hover:text-foreground">
+            <button onClick={() => { setAddingField(false); setShowNewValue(false); }} className="text-muted-foreground hover:text-foreground">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>

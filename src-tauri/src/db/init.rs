@@ -52,6 +52,48 @@ pub fn init_db(conn: &Connection) -> AppResult<()> {
             value       TEXT NOT NULL
         );
     ")?;
+
+    conn.execute_batch("
+        CREATE TABLE IF NOT EXISTS templates (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            name        TEXT    NOT NULL,
+            is_builtin  INTEGER NOT NULL DEFAULT 0,
+            fields      TEXT    NOT NULL DEFAULT '[]',
+            created_at  INTEGER NOT NULL DEFAULT (unixepoch())
+        );
+    ")?;
+
+    // Seed builtin templates once
+    let builtin_count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM templates WHERE is_builtin=1", [], |r| r.get(0)
+    )?;
+    if builtin_count == 0 {
+        let builtins: &[(&str, &str)] = &[
+            ("账号密码", r#"[{"name":"username","field_type":"text"},{"name":"password","field_type":"password"},{"name":"url","field_type":"url"}]"#),
+            ("API/Token", r#"[{"name":"api_key","field_type":"token"},{"name":"endpoint","field_type":"url"}]"#),
+            ("银行卡",    r#"[{"name":"card_number","field_type":"secret"},{"name":"cvv","field_type":"secret"},{"name":"expiry","field_type":"date"}]"#),
+            ("笔记",      r#"[{"name":"content","field_type":"markdown"}]"#),
+        ];
+        for (name, fields) in builtins {
+            conn.execute(
+                "INSERT INTO templates(name, is_builtin, fields) VALUES(?1, 1, ?2)",
+                rusqlite::params![name, fields],
+            )?;
+        }
+    }
+
+    // Migration: add is_pinned to groups if missing
+    if conn.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info('groups') WHERE name='is_pinned'",
+        [],
+        |r| r.get::<_, i64>(0),
+    ).unwrap_or(0) == 0 {
+        conn.execute(
+            "ALTER TABLE groups ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0",
+            [],
+        )?;
+    }
+
     Ok(())
 }
 

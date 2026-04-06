@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { listGroups, createGroup, updateGroup, deleteGroup } from '../lib/tauri';
+import { listGroups, createGroup, updateGroup, deleteGroup, toggleGroupPin, reorderGroups } from '../lib/tauri';
 
 export function useGroups() {
   const qc = useQueryClient();
@@ -25,5 +25,22 @@ export function useGroups() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['groups'] }),
   });
 
-  return { groups, createGroup: create.mutateAsync, updateGroup: update.mutateAsync, deleteGroup: remove.mutateAsync };
+  const togglePin = useMutation({
+    mutationFn: (id: number) => toggleGroupPin(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['groups'] }),
+  });
+
+  const reorder = useMutation({
+    mutationFn: (items: Array<{ id: number; sort_order: number }>) => reorderGroups(items),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['groups'] }),
+  });
+
+  return {
+    groups,
+    createGroup: create.mutateAsync,
+    updateGroup: update.mutateAsync,
+    deleteGroup: remove.mutateAsync,
+    toggleGroupPin: togglePin.mutateAsync,
+    reorderGroups: reorder.mutateAsync,
+  };
 }

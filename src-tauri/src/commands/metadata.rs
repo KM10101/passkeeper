@@ -12,13 +12,14 @@ pub struct SiteMetadata {
 
 fn build_http_client(state: &AppState) -> reqwest::Client {
     let settings = get_settings_inner(state).ok();
+    let proxy_enabled = settings.as_ref().map(|s| s.proxy_enabled).unwrap_or(false);
     let http_proxy = settings.as_ref().map(|s| s.http_proxy.as_str()).unwrap_or("").to_string();
     let no_proxy_str = settings.as_ref().map(|s| s.no_proxy.as_str()).unwrap_or("").to_string();
 
     let mut builder = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10));
 
-    if !http_proxy.is_empty() {
+    if proxy_enabled && !http_proxy.is_empty() {
         if let Ok(mut proxy) = reqwest::Proxy::all(&http_proxy) {
             if !no_proxy_str.is_empty() {
                 proxy = proxy.no_proxy(reqwest::NoProxy::from_string(&no_proxy_str));

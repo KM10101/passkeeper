@@ -8,6 +8,7 @@ export interface Group {
   parent_id: number | null;
   icon: string | null;
   sort_order: number;
+  is_pinned: boolean;
   created_at: number;
   entry_count: number;
 }
@@ -55,8 +56,17 @@ export interface AppSettings {
   favicon_cache_expiry_days: number;
   http_proxy: string;
   no_proxy: string;
+  proxy_enabled: boolean;
   storage_dir: string;
   timezone: string;
+}
+
+export interface Template {
+  id: number;
+  name: string;
+  is_builtin: boolean;
+  fields: string; // JSON string: Array<{name: string, field_type: string}>
+  created_at: number;
 }
 
 export interface SiteMetadata {
@@ -79,6 +89,10 @@ export const createGroup = (name: string, parentId: number | null, icon: string 
 export const updateGroup = (id: number, name: string, icon: string | null, sortOrder: number) =>
   invoke<Group>('update_group', { id, name, icon, sortOrder });
 export const deleteGroup = (id: number) => invoke<void>('delete_group', { id });
+export const toggleGroupPin = (id: number) =>
+  invoke<Group>('toggle_group_pin', { id });
+export const reorderGroups = (items: Array<{ id: number; sort_order: number }>) =>
+  invoke<void>('reorder_groups', { items });
 
 // Entries
 export const listEntries = (groupId?: number, search?: string, tags?: string, favorite?: boolean) =>
@@ -122,22 +136,37 @@ export const updateSettings = (
   faviconCacheExpiryDays: number,
   httpProxy: string,
   noProxy: string,
+  proxyEnabled: boolean,
   timezone: string,
 ) => invoke<AppSettings>('update_settings', {
   autoLockMinutes, showPasswordsByDefault,
-  faviconCacheExpiryDays, httpProxy, noProxy, timezone,
+  faviconCacheExpiryDays, httpProxy, noProxy, proxyEnabled, timezone,
 });
 
 export const getStorageDir = () => invoke<string>('get_storage_dir');
 export const migrateStorage = (newDir: string) =>
   invoke<void>('migrate_storage', { newDir });
 
+// Templates
+export const listTemplates = () => invoke<Template[]>('list_templates');
+export const createTemplate = (name: string, fields: string) =>
+  invoke<Template>('create_template', { name, fields });
+export const updateTemplate = (id: number, name: string, fields: string) =>
+  invoke<Template>('update_template', { id, name, fields });
+export const deleteTemplate = (id: number) =>
+  invoke<void>('delete_template', { id });
+export const resetBuiltinTemplate = (id: number) =>
+  invoke<Template>('reset_builtin_template', { id });
+
 // Shell
 export const openUrl = (url: string) => shellOpen(url);
 
 // Dialog
-export const saveFileDialog = (options?: { title?: string; filters?: Array<{ name: string; extensions: string[] }> }) =>
-  dialogSave(options);
+export const saveFileDialog = (options?: {
+  title?: string;
+  defaultPath?: string;
+  filters?: Array<{ name: string; extensions: string[] }>;
+}) => dialogSave(options);
 export const openFileDialog = (options?: { title?: string; filters?: Array<{ name: string; extensions: string[] }> }) =>
   dialogOpen({ ...options, multiple: false }) as Promise<string | null>;
 export const openDirDialog = () =>
