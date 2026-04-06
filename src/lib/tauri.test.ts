@@ -4,8 +4,14 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
 }));
 
+vi.mock('@tauri-apps/plugin-dialog', () => ({
+  save: vi.fn(),
+  open: vi.fn(),
+}));
+
 import { invoke } from '@tauri-apps/api/core';
-import { unlockVault, isLocked, updateSettings } from './tauri';
+import { save as dialogSave } from '@tauri-apps/plugin-dialog';
+import { unlockVault, isLocked, updateSettings, saveFileDialog } from './tauri';
 
 describe('tauri IPC wrappers', () => {
   it('unlockVault calls invoke with correct command', async () => {
@@ -26,5 +32,13 @@ describe('tauri IPC wrappers', () => {
     expect(invoke).toHaveBeenCalledWith('update_settings', expect.objectContaining({
       proxyEnabled: true,
     }));
+  });
+
+  it('saveFileDialog passes defaultPath option', async () => {
+    (dialogSave as any).mockResolvedValue('/tmp/test.pkv');
+    await saveFileDialog({ defaultPath: 'passkeeper-20260406-1830.pkv' });
+    expect(dialogSave).toHaveBeenCalledWith(
+      expect.objectContaining({ defaultPath: 'passkeeper-20260406-1830.pkv' })
+    );
   });
 });

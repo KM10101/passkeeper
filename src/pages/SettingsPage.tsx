@@ -6,6 +6,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Switch } from "../components/ui/switch";
+import { TimezoneCombobox } from "../components/ui/TimezoneCombobox";
 import { cn } from "../lib/utils";
 import {
   getSettings, updateSettings, exportVaultToPath, importVaultFromPath,
@@ -54,8 +55,12 @@ export function SettingsPage({ onBack }: Props) {
 
   const handleExport = async () => {
     if (!exportPassword) { toast.error("请输入导出密码"); return; }
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
     const path = await saveFileDialog({
       title: "导出备份",
+      defaultPath: `passkeeper-${ts}.pkv`,
       filters: [{ name: "PassKeeper Vault", extensions: ["pkv"] }],
     });
     if (!path) return;
@@ -179,13 +184,7 @@ export function SettingsPage({ onBack }: Props) {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="timezone" className="text-sm font-medium">时区</Label>
-                <Input
-                  id="timezone"
-                  value={timezone}
-                  onChange={e => setTimezone(e.target.value)}
-                  placeholder="留空使用系统时区（如 Asia/Shanghai）"
-                  className="h-8 text-sm"
-                />
+                <TimezoneCombobox value={timezone} onChange={setTimezone} />
               </div>
               <div className="flex justify-end">
                 <Button size="sm" onClick={() => saveSettings.mutate()} disabled={saveSettings.isPending}>

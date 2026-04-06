@@ -138,8 +138,11 @@ export const migrateStorage = (newDir: string) =>
 export const openUrl = (url: string) => shellOpen(url);
 
 // Dialog
-export const saveFileDialog = (options?: { title?: string; filters?: Array<{ name: string; extensions: string[] }> }) =>
-  dialogSave(options);
+export const saveFileDialog = (options?: {
+  title?: string;
+  defaultPath?: string;
+  filters?: Array<{ name: string; extensions: string[] }>;
+}) => dialogSave(options);
 export const openFileDialog = (options?: { title?: string; filters?: Array<{ name: string; extensions: string[] }> }) =>
   dialogOpen({ ...options, multiple: false }) as Promise<string | null>;
 export const openDirDialog = () =>
