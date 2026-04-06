@@ -77,6 +77,9 @@ pub fn conf_path() -> std::path::PathBuf {
 
 pub fn write_conf_storage_dir(dir: &str) -> AppResult<()> {
     let path = conf_path();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
     std::fs::write(&path, format!("storage_dir={}\n", dir))?;
     Ok(())
 }
