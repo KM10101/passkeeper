@@ -6,6 +6,7 @@ import { EntryList } from "../components/EntryList";
 import { EntryDetail } from "../components/entries/EntryDetail";
 import { EntryDialog } from "../components/entries/EntryDialog";
 import { useVault } from "../hooks/useVault";
+import { useEntries } from "../hooks/useEntries";
 import { getEntry } from "../lib/tauri";
 import { SettingsPage } from "./SettingsPage";
 
@@ -13,6 +14,7 @@ interface Props { onLock: () => void; }
 
 export function VaultPage({ onLock }: Props) {
   const { lock } = useVault();
+  const { entries: allEntries } = useEntries(undefined);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -58,6 +60,7 @@ export function VaultPage({ onLock }: Props) {
           <GroupTree
             selected={selectedGroupId}
             onSelect={id => { setSelectedGroupId(id); setSelectedEntryId(null); }}
+            totalCount={allEntries.length}
           />
         }
         entryList={
