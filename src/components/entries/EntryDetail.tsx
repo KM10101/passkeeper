@@ -206,6 +206,7 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldType, setNewFieldType] = useState("text");
   const [newFieldValue, setNewFieldValue] = useState("");
+  const [showNewValue, setShowNewValue] = useState(false);
 
   const toggleRaw = (fieldId: number) => setRawFields(prev => {
     const next = new Set(prev);
@@ -275,7 +276,7 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
     const updated = [...localFields, newField];
     setLocalFields(updated);
     await persistFields(updated);
-    setNewFieldName(""); setNewFieldType("text"); setNewFieldValue(""); setAddingField(false);
+    setNewFieldName(""); setNewFieldType("text"); setNewFieldValue(""); setShowNewValue(false); setAddingField(false);
     toast.success("字段已添加");
   };
 
@@ -358,28 +359,43 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
-            {RICH_TYPES.has(newFieldType) ? (
-              <Textarea
-                placeholder="值"
-                value={newFieldValue}
-                onChange={e => setNewFieldValue(e.target.value)}
-                className="flex-1 text-sm min-h-[80px] resize-y font-mono"
-                onKeyDown={e => { if (e.key === "Escape") setAddingField(false); }}
-              />
+            {RICH_TYPES.has(newFieldType) || newFieldType === 'text' || newFieldType === 'secret' ? (
+              <div className="flex-1 relative">
+                <Textarea
+                  placeholder="值"
+                  value={newFieldValue}
+                  onChange={e => setNewFieldValue(e.target.value)}
+                  className={cn(
+                    'w-full text-sm min-h-[80px] resize-y',
+                    !RICH_TYPES.has(newFieldType) && 'font-mono',
+                  )}
+                  style={newFieldType === 'secret' && !showNewValue ? { WebkitTextSecurity: 'disc' } as React.CSSProperties : undefined}
+                  onKeyDown={e => { if (e.key === "Escape") setAddingField(false); }}
+                />
+                {newFieldType === 'secret' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowNewValue(v => !v)}
+                    className="absolute top-1 right-1 text-muted-foreground hover:text-foreground"
+                  >
+                    {showNewValue ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                )}
+              </div>
             ) : (
               <Input
                 placeholder="值"
                 value={newFieldValue}
                 onChange={e => setNewFieldValue(e.target.value)}
                 className="flex-1 h-8 text-sm"
-                type={["password","secret","token"].includes(newFieldType) ? "password" : "text"}
+                type={["password","token"].includes(newFieldType) ? "password" : "text"}
                 onKeyDown={e => { if (e.key === "Escape") setAddingField(false); }}
               />
             )}
             <button onClick={handleAddField} className="text-primary hover:text-primary/80">
               <Check className="h-4 w-4" />
             </button>
-            <button onClick={() => setAddingField(false)} className="text-muted-foreground hover:text-foreground">
+            <button onClick={() => { setAddingField(false); setShowNewValue(false); }} className="text-muted-foreground hover:text-foreground">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
