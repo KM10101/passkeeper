@@ -221,7 +221,7 @@ export function EntryDialog({ open, onClose, existing, defaultGroupId }: Props) 
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg" style={{ resize: 'both', overflow: 'auto', minWidth: '520px', minHeight: '400px', maxWidth: '90vw', maxHeight: '90vh' }}>
         <DialogHeader>
           <DialogTitle>{existing ? "编辑条目" : "新建条目"}</DialogTitle>
         </DialogHeader>

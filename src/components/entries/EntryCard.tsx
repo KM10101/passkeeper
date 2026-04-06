@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { GripVertical, MoreHorizontal, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -18,6 +19,9 @@ interface Props {
 export function EntryCard({ entry, selected, onClick, onEdit, onPin, onDelete }: Props) {
   const tags = entry.tags ? entry.tags.split(",").map(t => t.trim()).filter(Boolean) : [];
   const domain = entry.url ? (() => { try { return new URL(entry.url).hostname; } catch { return null; } })() : null;
+
+  const [imgError, setImgError] = useState(false);
+  useEffect(() => { setImgError(false); }, [entry.id]);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: entry.id });
 
@@ -56,12 +60,12 @@ export function EntryCard({ entry, selected, onClick, onEdit, onPin, onDelete }:
       >
         {/* Favicon */}
         <div className="shrink-0 w-8 h-8 rounded-md bg-muted flex items-center justify-center overflow-hidden mt-0.5">
-          {domain ? (
+          {domain && !imgError ? (
             <img
               src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
               alt=""
               className="w-6 h-6"
-              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+              onError={() => setImgError(true)}
             />
           ) : (
             <span className="text-xs font-bold text-muted-foreground">
