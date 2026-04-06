@@ -29,7 +29,7 @@ function GroupItem({
   group: Group;
   selected: boolean;
   onSelect: () => void;
-  onRename: (id: number, name: string, icon: string | null) => Promise<void>;
+  onRename: (id: number, name: string, icon: string | null, sortOrder: number) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   onTogglePin: (id: number) => Promise<void>;
 }) {
@@ -53,7 +53,7 @@ function GroupItem({
 
   const commitEdit = async () => {
     if (!editName.trim()) { setEditing(false); return; }
-    await onRename(group.id, editName.trim(), editIcon);
+    await onRename(group.id, editName.trim(), editIcon, group.sort_order);
     setEditing(false);
   };
 
@@ -112,7 +112,7 @@ function GroupItem({
       <button
         type="button"
         className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground shrink-0"
-        onClick={e => { e.stopPropagation(); onTogglePin(group.id); }}
+        onClick={async e => { e.stopPropagation(); try { await onTogglePin(group.id); } catch { toast.error("操作失败，请重试"); } }}
         title={group.is_pinned ? "取消置顶" : "置顶"}
       >
         {group.is_pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
@@ -166,7 +166,7 @@ function AddGroupCard({ onAdd, onCancel }: { onAdd: (name: string, icon: string)
 export function GroupTree({ selected, onSelect, totalCount }: Props) {
   const { groups, createGroup, updateGroup, deleteGroup, toggleGroupPin, reorderGroups } = useGroups();
   const [adding, setAdding] = useState(false);
-  const sensors = useSensors(useSensor(PointerSensor));
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const handleAdd = async (name: string, icon: string) => {
     if (groups.some(g => g.name === name)) { toast.error("同名分组已存在"); return; }
@@ -176,18 +176,25 @@ export function GroupTree({ selected, onSelect, totalCount }: Props) {
     } catch { toast.error("创建失败，请重试"); }
   };
 
-  const handleRename = async (id: number, name: string, icon: string | null) => {
-    const g = groups.find(g => g.id === id)!;
-    await updateGroup({ id, name, icon, sortOrder: g.sort_order });
+  const handleRename = async (id: number, name: string, icon: string | null, sortOrder: number) => {
+    try {
+      await updateGroup({ id, name, icon, sortOrder });
+    } catch {
+      toast.error("重命名失败，请重试");
+    }
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIndex = groups.findIndex(g => g.id === active.id);
     const newIndex = groups.findIndex(g => g.id === over.id);
     const reordered = arrayMove(groups, oldIndex, newIndex);
-    reorderGroups(reordered.map((g, i) => ({ id: g.id, sort_order: i })));
+    try {
+      await reorderGroups(reordered.map((g, i) => ({ id: g.id, sort_order: i })));
+    } catch {
+      toast.error("排序保存失败，请重试");
+    }
   };
 
   return (
