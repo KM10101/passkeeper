@@ -6,6 +6,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Switch } from "../components/ui/switch";
+import { cn } from "../lib/utils";
 import {
   getSettings, updateSettings, exportVaultToPath, importVaultFromPath,
   saveFileDialog, openFileDialog, getStorageDir, migrateStorage, openDirDialog,
@@ -23,6 +24,7 @@ export function SettingsPage({ onBack }: Props) {
   const [faviconExpiry, setFaviconExpiry] = useState(7);
   const [httpProxy, setHttpProxy] = useState("");
   const [noProxy, setNoProxy] = useState("");
+  const [proxyEnabled, setProxyEnabled] = useState(false);
   const [timezone, setTimezone] = useState("");
   const [storageDirInput, setStorageDirInput] = useState("");
   const [exportPassword, setExportPassword] = useState("");
@@ -37,11 +39,12 @@ export function SettingsPage({ onBack }: Props) {
     setFaviconExpiry(settings.favicon_cache_expiry_days);
     setHttpProxy(settings.http_proxy);
     setNoProxy(settings.no_proxy);
+    setProxyEnabled(settings.proxy_enabled);
     setTimezone(settings.timezone ?? "");
   }, [settings]);
 
   const saveSettings = useMutation({
-    mutationFn: () => updateSettings(autoLock, showPw, faviconExpiry, httpProxy, noProxy, timezone),
+    mutationFn: () => updateSettings(autoLock, showPw, faviconExpiry, httpProxy, noProxy, proxyEnabled, timezone),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["settings"] });
       toast.success("设置已保存");
@@ -156,12 +159,19 @@ export function SettingsPage({ onBack }: Props) {
                   <span className="text-sm text-muted-foreground">天</span>
                 </div>
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="proxy-enabled" className="text-sm font-medium">启用代理</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">开启后使用下方代理设置</p>
+                </div>
+                <Switch id="proxy-enabled" checked={proxyEnabled} onCheckedChange={setProxyEnabled} />
+              </div>
+              <div className={cn("flex flex-col gap-1.5", !proxyEnabled && "opacity-50 pointer-events-none")}>
                 <Label htmlFor="http-proxy" className="text-sm font-medium">HTTP 代理</Label>
                 <Input id="http-proxy" value={httpProxy} onChange={e => setHttpProxy(e.target.value)}
                   placeholder="http://127.0.0.1:7890" />
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className={cn("flex flex-col gap-1.5", !proxyEnabled && "opacity-50 pointer-events-none")}>
                 <Label htmlFor="no-proxy" className="text-sm font-medium">不走代理</Label>
                 <Input id="no-proxy" value={noProxy} onChange={e => setNoProxy(e.target.value)}
                   placeholder="localhost,127.0.0.1,.internal.com" />

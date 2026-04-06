@@ -10,6 +10,7 @@ pub struct AppSettings {
     pub favicon_cache_expiry_days: i64,
     pub http_proxy: String,
     pub no_proxy: String,
+    pub proxy_enabled: bool,
     pub storage_dir: String,
     pub timezone: String,
 }
@@ -39,6 +40,7 @@ pub fn get_settings_inner(state: &AppState) -> AppResult<AppSettings> {
             .parse().unwrap_or(7),
         http_proxy: read_config(&db, "http_proxy", ""),
         no_proxy: read_config(&db, "no_proxy", ""),
+        proxy_enabled: read_config(&db, "proxy_enabled", "false") == "true",
         storage_dir: read_config(&db, "storage_dir", ""),
         timezone: read_config(&db, "timezone", ""),
     })
@@ -50,6 +52,7 @@ pub fn update_settings_inner(
     favicon_cache_expiry_days: i64,
     http_proxy: String,
     no_proxy: String,
+    proxy_enabled: bool,
     timezone: String,
     state: &AppState,
 ) -> AppResult<AppSettings> {
@@ -59,6 +62,7 @@ pub fn update_settings_inner(
     write_config(&db, "favicon_cache_expiry_days", &favicon_cache_expiry_days.to_string())?;
     write_config(&db, "http_proxy", &http_proxy)?;
     write_config(&db, "no_proxy", &no_proxy)?;
+    write_config(&db, "proxy_enabled", &proxy_enabled.to_string())?;
     write_config(&db, "timezone", &timezone)?;
     drop(db);
     get_settings_inner(state)
@@ -97,11 +101,12 @@ pub async fn update_settings(
     favicon_cache_expiry_days: i64,
     http_proxy: String,
     no_proxy: String,
+    proxy_enabled: bool,
     timezone: String,
     state: State<'_, AppState>,
 ) -> Result<AppSettings, AppError> {
     update_settings_inner(auto_lock_minutes, show_passwords_by_default,
-        favicon_cache_expiry_days, http_proxy, no_proxy, timezone, &state)
+        favicon_cache_expiry_days, http_proxy, no_proxy, proxy_enabled, timezone, &state)
 }
 
 #[tauri::command]
@@ -146,6 +151,7 @@ mod tests {
             10, true, 14,
             "http://127.0.0.1:7890".into(),
             "localhost,127.0.0.1".into(),
+            false,
             "".into(),
             &state,
         ).unwrap();
@@ -153,5 +159,21 @@ mod tests {
         assert_eq!(updated.favicon_cache_expiry_days, 14);
         assert_eq!(updated.http_proxy, "http://127.0.0.1:7890");
         assert_eq!(updated.no_proxy, "localhost,127.0.0.1");
+    }
+
+    #[test]
+    fn proxy_enabled_defaults_to_false() {
+        let state = make_state();
+        let s = get_settings_inner(&state).unwrap();
+        assert!(!s.proxy_enabled);
+    }
+
+    #[test]
+    fn proxy_enabled_roundtrip() {
+        let state = make_state();
+        update_settings_inner(5, false, 7, "http://proxy:8080".into(), "".into(), true, "".into(), &state).unwrap();
+        let s = get_settings_inner(&state).unwrap();
+        assert!(s.proxy_enabled);
+        assert_eq!(s.http_proxy, "http://proxy:8080");
     }
 }

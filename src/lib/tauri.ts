@@ -55,6 +55,7 @@ export interface AppSettings {
   favicon_cache_expiry_days: number;
   http_proxy: string;
   no_proxy: string;
+  proxy_enabled: boolean;
   storage_dir: string;
   timezone: string;
 }
@@ -122,10 +123,11 @@ export const updateSettings = (
   faviconCacheExpiryDays: number,
   httpProxy: string,
   noProxy: string,
+  proxyEnabled: boolean,
   timezone: string,
 ) => invoke<AppSettings>('update_settings', {
   autoLockMinutes, showPasswordsByDefault,
-  faviconCacheExpiryDays, httpProxy, noProxy, timezone,
+  faviconCacheExpiryDays, httpProxy, noProxy, proxyEnabled, timezone,
 });
 
 export const getStorageDir = () => invoke<string>('get_storage_dir');

@@ -5,7 +5,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 import { invoke } from '@tauri-apps/api/core';
-import { unlockVault, isLocked } from './tauri';
+import { unlockVault, isLocked, updateSettings } from './tauri';
 
 describe('tauri IPC wrappers', () => {
   it('unlockVault calls invoke with correct command', async () => {
@@ -18,5 +18,13 @@ describe('tauri IPC wrappers', () => {
     (invoke as any).mockResolvedValue(true);
     const result = await isLocked();
     expect(result).toBe(true);
+  });
+
+  it('updateSettings passes proxyEnabled', async () => {
+    (invoke as any).mockResolvedValue({ proxy_enabled: true, auto_lock_minutes: 5, show_passwords_by_default: false, favicon_cache_expiry_days: 7, http_proxy: '', no_proxy: '', storage_dir: '', timezone: '' });
+    await updateSettings(5, false, 7, 'http://proxy:8080', '', true, '');
+    expect(invoke).toHaveBeenCalledWith('update_settings', expect.objectContaining({
+      proxyEnabled: true,
+    }));
   });
 });
