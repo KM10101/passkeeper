@@ -1,5 +1,6 @@
 // src/components/ui/EmojiPicker.tsx
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 const EMOJIS = [
   '📁', '📂', '💼', '🏠', '🖥️', '🔑', '🏦', '🌐',
@@ -15,30 +16,48 @@ interface Props {
 
 export function EmojiPicker({ value, onChange }: Props) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [popupPos, setPopupPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPopupPos({ top: rect.bottom + 4, left: rect.left });
+    }
+    setOpen(v => !v);
+  };
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (
+        btnRef.current && !btnRef.current.contains(e.target as Node) &&
+        popupRef.current && !popupRef.current.contains(e.target as Node)
+      ) setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
+        ref={btnRef}
         type="button"
-        onClick={() => setOpen(v => !v)}
+        onClick={handleOpen}
         className="w-9 h-9 rounded-md border border-input bg-background flex items-center justify-center text-xl hover:bg-accent transition-colors"
         title="选择图标"
       >
         {value || '📁'}
       </button>
 
-      {open && (
-        <div className="absolute z-50 top-full mt-1 left-0 rounded-md border border-border bg-background shadow-md p-2">
+      {open && createPortal(
+        <div
+          ref={popupRef}
+          style={{ position: 'fixed', top: popupPos.top, left: popupPos.left, zIndex: 9999 }}
+          className="rounded-md border border-border bg-background shadow-md p-2"
+        >
           <div className="grid grid-cols-7 gap-1">
             {EMOJIS.map(emoji => (
               <button
@@ -51,7 +70,8 @@ export function EmojiPicker({ value, onChange }: Props) {
               </button>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

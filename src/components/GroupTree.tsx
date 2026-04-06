@@ -7,6 +7,7 @@ import { EmojiPicker } from "./ui/EmojiPicker";
 import { useGroups } from "../hooks/useGroups";
 import { cn } from "../lib/utils";
 import type { Group } from "../lib/tauri";
+import { toast } from "sonner";
 
 interface Props {
   selected: number | null;
@@ -101,7 +102,7 @@ function GroupItem({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-32">
           <DropdownMenuItem onClick={e => { e.stopPropagation(); startEdit(); }}>
-            <Pencil className="h-3.5 w-3.5 mr-2" /> 重命名
+            <Pencil className="h-3.5 w-3.5 mr-2" /> 编辑
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -117,7 +118,7 @@ function GroupItem({
 }
 
 // ── AddGroupCard (inline new group form) ─────────────────────
-function AddGroupCard({ onAdd }: { onAdd: (name: string, icon: string) => Promise<void> }) {
+function AddGroupCard({ onAdd, onCancel }: { onAdd: (name: string, icon: string) => Promise<void>; onCancel: () => void }) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("📁");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -126,7 +127,7 @@ function AddGroupCard({ onAdd }: { onAdd: (name: string, icon: string) => Promis
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) { toast.error("分组名称不能为空"); return; }
     await onAdd(name.trim(), icon);
   };
 
@@ -146,6 +147,9 @@ function AddGroupCard({ onAdd }: { onAdd: (name: string, icon: string) => Promis
       <button type="submit" className="text-primary hover:text-primary/80 shrink-0">
         <Check className="h-4 w-4" />
       </button>
+      <button type="button" onClick={onCancel} className="text-muted-foreground hover:text-foreground shrink-0">
+        <X className="h-4 w-4" />
+      </button>
     </form>
   );
 }
@@ -156,8 +160,12 @@ export function GroupTree({ selected, onSelect, totalCount }: Props) {
   const [adding, setAdding] = useState(false);
 
   const handleAdd = async (name: string, icon: string) => {
-    await createGroup({ name, parentId: null, icon, sortOrder: groups.length });
-    setAdding(false);
+    try {
+      await createGroup({ name, parentId: null, icon, sortOrder: groups.length });
+      setAdding(false);
+    } catch {
+      toast.error("同名分组已存在");
+    }
   };
 
   const handleRename = async (id: number, name: string, icon: string | null) => {
@@ -172,7 +180,7 @@ export function GroupTree({ selected, onSelect, totalCount }: Props) {
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">分组</span>
           <button
-            onClick={() => setAdding(v => !v)}
+            onClick={() => setAdding(true)}
             className="w-6 h-6 rounded-md bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center transition-colors"
             title="新建分组"
           >
@@ -214,7 +222,7 @@ export function GroupTree({ selected, onSelect, totalCount }: Props) {
             />
           ))}
           {adding && (
-            <AddGroupCard onAdd={handleAdd} />
+            <AddGroupCard onAdd={handleAdd} onCancel={() => setAdding(false)} />
           )}
         </div>
       </div>
