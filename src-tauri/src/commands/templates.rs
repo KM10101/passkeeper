@@ -49,9 +49,16 @@ pub fn create_template_inner(name: &str, fields: &str, state: &AppState) -> AppR
 
 pub fn update_template_inner(id: i64, name: &str, fields: &str, state: &AppState) -> AppResult<Template> {
     let db = state.db.lock().unwrap();
+    let (current_name, is_builtin): (String, i64) = db.query_row(
+        "SELECT name, is_builtin FROM templates WHERE id=?1", [id],
+        |r| Ok((r.get(0)?, r.get(1)?))
+    ).map_err(|_| AppError::NotFound)?;
+
+    // Builtin templates: allow field edits but not name changes
+    let effective_name = if is_builtin != 0 { current_name.as_str() } else { name };
     let rows = db.execute(
         "UPDATE templates SET name=?1, fields=?2 WHERE id=?3",
-        rusqlite::params![name, fields, id],
+        rusqlite::params![effective_name, fields, id],
     )?;
     if rows == 0 { return Err(AppError::NotFound); }
     Ok(query_template(&db, id)?)
@@ -88,7 +95,7 @@ pub fn reset_builtin_template_inner(id: i64, state: &AppState) -> AppResult<Temp
     let default_fields = BUILTIN_DEFAULTS.iter()
         .find(|(n, _)| *n == name.as_str())
         .map(|(_, f)| *f)
-        .unwrap_or("[]");
+        .ok_or_else(|| AppError::Other(format!("没有找到内置模版 '{}' 的默认字段", name)))?;
     db.execute("UPDATE templates SET fields=?1 WHERE id=?2", rusqlite::params![default_fields, id])?;
     Ok(query_template(&db, id)?)
 }
