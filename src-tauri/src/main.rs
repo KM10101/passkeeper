@@ -24,10 +24,15 @@ fn main() {
     let default_conn = rusqlite::Connection::open(&default_path).unwrap();
     init_db(&default_conn).unwrap();
 
-    let storage_dir: Option<String> = default_conn.query_row(
-        "SELECT value FROM app_config WHERE key='storage_dir'",
-        [], |r| r.get::<_, String>(0),
-    ).ok().filter(|s| !s.is_empty());
+    // Sidecar takes priority — handles repeated migrations where active DB ≠ default DB
+    let storage_dir: Option<String> =
+        commands::settings::read_conf_storage_dir()
+        .or_else(|| {
+            default_conn.query_row(
+                "SELECT value FROM app_config WHERE key='storage_dir'",
+                [], |r| r.get::<_, String>(0),
+            ).ok().filter(|s| !s.is_empty())
+        });
 
     let (active_conn, db_path) = if let Some(ref dir) = storage_dir {
         let custom_path = std::path::PathBuf::from(dir).join("vault.db");

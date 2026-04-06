@@ -68,6 +68,26 @@ pub fn update_settings_inner(
     get_settings_inner(state)
 }
 
+pub fn conf_path() -> std::path::PathBuf {
+    dirs::data_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("passkeeper")
+        .join("passkeeper.conf")
+}
+
+pub fn write_conf_storage_dir(dir: &str) -> AppResult<()> {
+    let path = conf_path();
+    std::fs::write(&path, format!("storage_dir={}\n", dir))?;
+    Ok(())
+}
+
+pub fn read_conf_storage_dir() -> Option<String> {
+    std::fs::read_to_string(conf_path()).ok()
+        .and_then(|s| s.lines()
+            .find_map(|line| line.strip_prefix("storage_dir=").map(|v| v.to_string())))
+        .filter(|s| !s.is_empty())
+}
+
 pub fn get_storage_dir_inner(state: &AppState) -> String {
     let path = state.db_path.lock().unwrap();
     path.parent()
@@ -79,9 +99,27 @@ pub fn migrate_storage_inner(new_dir: String, state: &AppState) -> AppResult<()>
     let current_path = state.db_path.lock().unwrap().clone();
     let new_path = std::path::PathBuf::from(&new_dir).join("vault.db");
     if new_path == current_path { return Ok(()); }
+
     std::fs::create_dir_all(&new_dir)?;
-    std::fs::copy(&current_path, &new_path)?;
+
+    // Checkpoint WAL to ensure the main DB file is fully up-to-date before copying
     let db = state.db.lock().unwrap();
+    db.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")?;
+    std::fs::copy(&current_path, &new_path)?;
+
+    // Write storage_dir to the NEW db copy so it's self-consistent
+    {
+        let new_conn = rusqlite::Connection::open(&new_path)?;
+        new_conn.execute(
+            "INSERT OR REPLACE INTO app_config(key,value) VALUES('storage_dir',?1)",
+            [&new_dir],
+        )?;
+    }
+
+    // Write sidecar conf — startup reads this first, handles repeated migrations
+    write_conf_storage_dir(&new_dir)?;
+
+    // Also update the currently open DB
     db.execute(
         "INSERT OR REPLACE INTO app_config(key,value) VALUES('storage_dir',?1)",
         [&new_dir],
@@ -175,5 +213,25 @@ mod tests {
         let s = get_settings_inner(&state).unwrap();
         assert!(s.proxy_enabled);
         assert_eq!(s.http_proxy, "http://proxy:8080");
+    }
+
+    #[test]
+    fn migrate_storage_writes_conf_and_new_db() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db_path = tmp.path().join("vault.db");
+        let conn = rusqlite::Connection::open(&db_path).unwrap();
+        crate::db::init::init_db(&conn).unwrap();
+        let state = AppState::new(conn, db_path.clone());
+
+        let new_dir = tmp.path().join("newloc").to_string_lossy().into_owned();
+        migrate_storage_inner(new_dir.clone(), &state).unwrap();
+
+        // New DB must have storage_dir set
+        let new_db_path = std::path::PathBuf::from(&new_dir).join("vault.db");
+        let new_conn = rusqlite::Connection::open(&new_db_path).unwrap();
+        let val: String = new_conn.query_row(
+            "SELECT value FROM app_config WHERE key='storage_dir'", [], |r| r.get(0)
+        ).unwrap();
+        assert_eq!(val, new_dir);
     }
 }
