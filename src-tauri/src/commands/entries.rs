@@ -121,8 +121,7 @@ pub fn list_entries_inner(
     let mut stmt = db.prepare(&sql)?;
     let entries = stmt
         .query_map(rusqlite::params_from_iter(params.iter()), map_entry_row)?
-        .map(|r| r.unwrap())
-        .collect();
+        .collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(entries)
 }
 

@@ -33,7 +33,7 @@ pub fn list_groups_inner(state: &AppState) -> AppResult<Vec<Group>> {
         id: r.get(0)?, name: r.get(1)?, parent_id: r.get(2)?,
         icon: r.get(3)?, sort_order: r.get(4)?, created_at: r.get(5)?,
         entry_count: r.get(6)?,
-    }))?.map(|r| r.unwrap()).collect();
+    }))?.collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(groups)
 }
 
