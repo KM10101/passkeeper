@@ -160,11 +160,15 @@ export function GroupTree({ selected, onSelect, totalCount }: Props) {
   const [adding, setAdding] = useState(false);
 
   const handleAdd = async (name: string, icon: string) => {
+    if (groups.some(g => g.name === name)) {
+      toast.error("同名分组已存在");
+      return;
+    }
     try {
       await createGroup({ name, parentId: null, icon, sortOrder: groups.length });
       setAdding(false);
     } catch {
-      toast.error("同名分组已存在");
+      toast.error("创建失败，请重试");
     }
   };
 
