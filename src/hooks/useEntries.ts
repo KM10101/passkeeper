@@ -13,7 +13,10 @@ export function useEntries(groupId?: number, search?: string) {
   const create = useMutation({
     mutationFn: (args: { groupId: number | null; title: string; url: string | null; siteTitle: string | null; username: string | null; templateType: string; tags: string; notes: string | null; favorite: boolean; fields: NewEntryField[] }) =>
       createEntry(args.groupId, args.title, args.url, args.siteTitle, args.username, args.templateType, args.tags, args.notes, args.favorite, args.fields),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['entries'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['entries'] });
+      qc.invalidateQueries({ queryKey: ['groups'] });
+    },
   });
   const update = useMutation({
     mutationFn: (args: { id: number; groupId: number | null; title: string; url: string | null; siteTitle: string | null; username: string | null; templateType: string; tags: string; notes: string | null; favorite: boolean; fields: NewEntryField[] }) =>
@@ -21,11 +24,15 @@ export function useEntries(groupId?: number, search?: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['entries'] });
       qc.invalidateQueries({ queryKey: ['entry'] });
+      qc.invalidateQueries({ queryKey: ['groups'] });
     },
   });
   const remove = useMutation({
     mutationFn: (id: number) => deleteEntry(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['entries'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['entries'] });
+      qc.invalidateQueries({ queryKey: ['groups'] });
+    },
   });
   const pin = useMutation({
     mutationFn: ({ id, pinned }: { id: number; pinned: boolean }) =>
