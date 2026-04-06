@@ -4,3 +4,4 @@ pub mod entries;
 pub mod metadata;
 pub mod vault_io;
 pub mod settings;
+pub mod templates;

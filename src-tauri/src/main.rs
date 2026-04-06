@@ -79,6 +79,11 @@ fn main() {
             commands::settings::update_settings,
             commands::settings::get_storage_dir,
             commands::settings::migrate_storage,
+            commands::templates::list_templates,
+            commands::templates::create_template,
+            commands::templates::update_template,
+            commands::templates::delete_template,
+            commands::templates::reset_builtin_template,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

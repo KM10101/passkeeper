@@ -61,6 +61,14 @@ export interface AppSettings {
   timezone: string;
 }
 
+export interface Template {
+  id: number;
+  name: string;
+  is_builtin: boolean;
+  fields: string; // JSON string: Array<{name: string, field_type: string}>
+  created_at: number;
+}
+
 export interface SiteMetadata {
   title: string | null;
   favicon_domain: string | null;
@@ -138,6 +146,17 @@ export const updateSettings = (
 export const getStorageDir = () => invoke<string>('get_storage_dir');
 export const migrateStorage = (newDir: string) =>
   invoke<void>('migrate_storage', { newDir });
+
+// Templates
+export const listTemplates = () => invoke<Template[]>('list_templates');
+export const createTemplate = (name: string, fields: string) =>
+  invoke<Template>('create_template', { name, fields });
+export const updateTemplate = (id: number, name: string, fields: string) =>
+  invoke<Template>('update_template', { id, name, fields });
+export const deleteTemplate = (id: number) =>
+  invoke<void>('delete_template', { id });
+export const resetBuiltinTemplate = (id: number) =>
+  invoke<Template>('reset_builtin_template', { id });
 
 // Shell
 export const openUrl = (url: string) => shellOpen(url);
