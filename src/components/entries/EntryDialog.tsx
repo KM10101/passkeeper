@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import type { FormEvent } from "react";
 import { Eye, EyeOff, Plus, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -390,30 +390,45 @@ function FieldValueInput({ field, onChange }: { field: FieldRow; onChange: (v: s
   const [show, setShow] = useState(false);
   const isSecret = ENCRYPTED_TYPES.has(field.field_type);
   const isRich = RICH_TYPES.has(field.field_type);
+  const isMultiline = isRich || field.field_type === 'text' || field.field_type === 'secret';
 
-  if (isRich) {
+  if (isMultiline) {
     return (
-      <Textarea
-        placeholder={`输入 ${field.field_type} 内容…`}
-        value={field.field_value}
-        onChange={e => onChange(e.target.value)}
-        className={cn(
-          'resize-y min-h-[80px] max-h-[200px] text-sm flex-1',
-          field.field_type !== 'markdown' && 'font-mono',
-          field.error ? 'border-destructive' : '',
+      <div className="relative flex-1">
+        <Textarea
+          placeholder={isRich ? `输入 ${field.field_type} 内容…` : '值'}
+          value={field.field_value}
+          onChange={e => onChange(e.target.value)}
+          className={cn(
+            'resize-y min-h-[60px] max-h-[200px] text-sm',
+            isRich && field.field_type !== 'markdown' ? 'font-mono' : '',
+            isSecret ? 'pr-8' : '',
+            field.error ? 'border-destructive' : '',
+          )}
+          style={isSecret && !show ? { WebkitTextSecurity: 'disc' } as React.CSSProperties : undefined}
+        />
+        {isSecret && (
+          <button
+            type="button"
+            onClick={() => setShow(v => !v)}
+            className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
+            tabIndex={-1}
+          >
+            {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          </button>
         )}
-      />
+      </div>
     );
   }
 
   return (
     <div className="relative flex-1">
       <Input
-        type={isSecret && !show ? "password" : "text"}
+        type={isSecret && !show ? 'password' : 'text'}
         placeholder="值"
         value={field.field_value}
         onChange={e => onChange(e.target.value)}
-        className={`h-8 text-sm pr-8 ${field.error ? "border-destructive" : ""}`}
+        className={`h-8 text-sm pr-8 ${field.error ? 'border-destructive' : ''}`}
       />
       {isSecret && (
         <button

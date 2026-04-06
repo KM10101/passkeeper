@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Eye, EyeOff, Copy, Star, Pencil, Trash2, ExternalLink, Plus, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
@@ -45,15 +45,16 @@ function FieldRow({
   const isEncrypted = ENCRYPTED_TYPES.has(field.field_type);
   const isUrl = field.field_type === "url";
   const isRich = RICH_TYPES.has(field.field_type);
+  const isMultilineEdit = isRich || field.field_type === 'text' || field.field_type === 'secret';
 
   useEffect(() => {
     if (!editing) return;
-    if (isRich) {
+    if (isMultilineEdit) {
       textareaRef.current?.focus();
     } else {
       inputRef.current?.focus();
     }
-  }, [editing, isRich]);
+  }, [editing, isMultilineEdit]);
 
   const copy = () => {
     navigator.clipboard.writeText(field.plaintext);
@@ -145,16 +146,17 @@ function FieldRow({
 
       {/* Value area */}
       {editing ? (
-        isRich ? (
+        isMultilineEdit ? (
           <Textarea
             ref={textareaRef}
             value={editValue}
             onChange={e => setEditValue(e.target.value)}
             onKeyDown={e => { if (e.key === 'Escape') cancelEdit(); }}
             className={cn(
-              'resize-y min-h-[80px] text-sm',
+              'resize-y min-h-[60px] text-sm',
               field.field_type !== 'markdown' && 'font-mono',
             )}
+            style={isEncrypted && !show ? { WebkitTextSecurity: 'disc' } as React.CSSProperties : undefined}
             disabled={saving}
           />
         ) : (
