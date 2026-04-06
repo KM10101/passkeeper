@@ -96,12 +96,14 @@ pub fn toggle_group_pin_inner(id: i64, state: &AppState) -> AppResult<Group> {
 
 pub fn reorder_groups_inner(items: Vec<GroupOrderItem>, state: &AppState) -> AppResult<()> {
     let db = state.db.lock().unwrap();
+    db.execute_batch("BEGIN")?;
     for item in &items {
         db.execute(
             "UPDATE groups SET sort_order=?1 WHERE id=?2",
             rusqlite::params![item.sort_order, item.id],
         )?;
     }
+    db.execute_batch("COMMIT")?;
     Ok(())
 }
 
