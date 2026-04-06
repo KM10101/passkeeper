@@ -191,11 +191,10 @@ export function EntryForm({ existing, defaultGroupId, onSuccess, onCancel }: Ent
     setFields(prev => [...prev, { id: nextFieldId(), field_name: name, field_type: type, field_value: "", sort_order: prev.length }]);
 
   const applyTemplate = (fields_def: Array<{ name: string; field_type: string }>) => {
-    const newFields = fields_def.map(f => ({
+    setFields(prev => [...prev, ...fields_def.map((f, i) => ({
       id: nextFieldId(),
-      field_name: f.name, field_type: f.field_type, field_value: "", sort_order: fields.length,
-    }));
-    setFields(prev => [...prev, ...newFields]);
+      field_name: f.name, field_type: f.field_type, field_value: "", sort_order: prev.length + i,
+    }))]);
   };
 
   const updateFieldValue = (id: number, value: string) =>
