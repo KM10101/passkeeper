@@ -1,33 +1,59 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Eye, EyeOff, Copy, Star, Pencil, Trash2, ExternalLink, Plus, Check, X } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Copy,
+  Star,
+  Pencil,
+  Trash2,
+  ExternalLink,
+  Plus,
+  Check,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import {
-  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
 } from "../ui/alert-dialog";
 import { useEntries } from "../../hooks/useEntries";
 import { getEntry, openUrl, getSettings } from "../../lib/tauri";
 import type { DecryptedField, NewEntryField } from "../../lib/tauri";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FieldRenderer, RICH_TYPES } from './FieldRenderer';
-import { cn } from '../../lib/utils';
+import { FieldRenderer, RICH_TYPES } from "./FieldRenderer";
+import { cn } from "../../lib/utils";
 
 const ENCRYPTED_TYPES = new Set(["password", "secret", "token"]);
 
 function formatDate(ts: number, timezone?: string): string {
   return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric", month: "long", day: "numeric",
-    hour: "2-digit", minute: "2-digit",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
     ...(timezone ? { timeZone: timezone } : {}),
   }).format(new Date(ts * 1000));
 }
 
 function FieldRow({
-  field, onSave, onDelete, canDelete, rawView, onToggleRaw,
+  field,
+  onSave,
+  onDelete,
+  canDelete,
+  rawView,
+  onToggleRaw,
+  forceCollapseState,
 }: {
   field: DecryptedField;
   onSave: (id: number, newValue: string) => Promise<void>;
@@ -35,6 +61,7 @@ function FieldRow({
   canDelete: boolean;
   rawView: boolean;
   onToggleRaw: () => void;
+  forceCollapseState?: boolean;
 }) {
   const [show, setShow] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -45,7 +72,16 @@ function FieldRow({
   const isEncrypted = ENCRYPTED_TYPES.has(field.field_type);
   const isUrl = field.field_type === "url";
   const isRich = RICH_TYPES.has(field.field_type);
-  const isMultilineEdit = isRich || field.field_type === 'text' || field.field_type === 'secret';
+  const isMultilineEdit =
+    isRich || field.field_type === "text" || field.field_type === "secret";
+
+  const [collapsed, setCollapsed] = useState(isMultilineEdit);
+
+  useEffect(() => {
+    if (forceCollapseState !== undefined && isMultilineEdit) {
+      setCollapsed(forceCollapseState);
+    }
+  }, [forceCollapseState, isMultilineEdit]);
 
   useEffect(() => {
     if (!editing) return;
@@ -62,7 +98,10 @@ function FieldRow({
   };
 
   const commitEdit = async () => {
-    if (saving || editValue === field.plaintext) { setEditing(false); return; }
+    if (saving || editValue === field.plaintext) {
+      setEditing(false);
+      return;
+    }
     setSaving(true);
     try {
       await onSave(field.id, editValue);
@@ -74,38 +113,64 @@ function FieldRow({
     }
   };
 
-  const cancelEdit = () => { setEditValue(field.plaintext); setEditing(false); };
+  const cancelEdit = () => {
+    setEditValue(field.plaintext);
+    setEditing(false);
+  };
 
   return (
-    <div className="rounded-lg border border-border bg-muted/20 p-3 flex flex-col gap-1.5">
+    <div className="group/field rounded-lg p-3 flex flex-col gap-1.5 transition-colors hover:bg-muted/30">
       {/* Header: field name + type + action buttons */}
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-muted-foreground capitalize flex-1">
+        <span
+          className="text-xs text-muted-foreground capitalize flex-1 cursor-pointer select-none"
+          onClick={() => isMultilineEdit && !editing && setCollapsed((v) => !v)}
+        >
           {field.field_name}
-          <span className="ml-1 text-[10px] opacity-50">{field.field_type}</span>
+          <span className="ml-1 text-[10px] opacity-40">
+            {field.field_type}
+          </span>
+          {isMultilineEdit && !editing && (
+            <span className="ml-1 text-[10px] opacity-40">
+              {collapsed ? "(已折叠)" : ""}
+            </span>
+          )}
         </span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 opacity-0 group-hover/field:opacity-100 focus-within:opacity-100 transition-opacity">
           {isRich && !editing && (
             <button
               onClick={onToggleRaw}
               className="text-[10px] px-1.5 py-0.5 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
             >
-              {rawView ? '渲染' : '原始'}
+              {rawView ? "渲染" : "原始"}
             </button>
           )}
           {!editing && isEncrypted && (
-            <button onClick={() => setShow(v => !v)} className="text-muted-foreground hover:text-foreground">
-              {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            <button
+              onClick={() => setShow((v) => !v)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              {show ? (
+                <EyeOff className="h-3.5 w-3.5" />
+              ) : (
+                <Eye className="h-3.5 w-3.5" />
+              )}
             </button>
           )}
           {!editing && isUrl && field.plaintext && (
-            <button onClick={() => openUrl(field.plaintext)} className="text-muted-foreground hover:text-foreground">
+            <button
+              onClick={() => openUrl(field.plaintext)}
+              className="text-muted-foreground hover:text-foreground"
+            >
               <ExternalLink className="h-3.5 w-3.5" />
             </button>
           )}
           {!editing && (
             <button
-              onClick={() => { setEditing(true); setEditValue(field.plaintext); }}
+              onClick={() => {
+                setEditing(true);
+                setEditValue(field.plaintext);
+              }}
               className="text-muted-foreground hover:text-foreground"
               title="编辑"
             >
@@ -132,12 +197,18 @@ function FieldRow({
             </>
           )}
           {!editing && (
-            <button onClick={copy} className="text-muted-foreground hover:text-foreground">
+            <button
+              onClick={copy}
+              className="text-muted-foreground hover:text-foreground"
+            >
               <Copy className="h-3.5 w-3.5" />
             </button>
           )}
           {canDelete && !editing && (
-            <button onClick={() => onDelete(field.id)} className="text-muted-foreground hover:text-destructive">
+            <button
+              onClick={() => onDelete(field.id)}
+              className="text-muted-foreground hover:text-destructive"
+            >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           )}
@@ -151,46 +222,61 @@ function FieldRow({
             <Textarea
               ref={textareaRef}
               value={editValue}
-              onChange={e => setEditValue(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Escape') cancelEdit(); }}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") cancelEdit();
+              }}
               className={cn(
-                'resize-y min-h-[60px] text-sm',
-                field.field_type !== 'markdown' && 'font-mono',
-                isEncrypted ? 'pr-8' : '',
+                "resize-y min-h-[60px] text-sm",
+                field.field_type !== "markdown" && "font-mono",
+                isEncrypted ? "pr-8" : "",
               )}
-              style={isEncrypted && !show ? { WebkitTextSecurity: 'disc' } as React.CSSProperties : undefined}
+              style={
+                isEncrypted && !show
+                  ? ({ WebkitTextSecurity: "disc" } as React.CSSProperties)
+                  : undefined
+              }
               disabled={saving}
             />
             {isEncrypted && (
               <button
-                onClick={() => setShow(v => !v)}
+                onClick={() => setShow((v) => !v)}
                 className="absolute right-2 top-1.5 text-muted-foreground hover:text-foreground"
                 tabIndex={-1}
               >
-                {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                {show ? (
+                  <EyeOff className="h-3.5 w-3.5" />
+                ) : (
+                  <Eye className="h-3.5 w-3.5" />
+                )}
               </button>
             )}
           </div>
         ) : (
           <Input
             ref={inputRef}
-            type={isEncrypted ? 'password' : 'text'}
+            type={isEncrypted ? "password" : "text"}
             value={editValue}
-            onChange={e => setEditValue(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') cancelEdit(); }}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitEdit();
+              if (e.key === "Escape") cancelEdit();
+            }}
             className="h-7 text-sm"
             disabled={saving}
           />
         )
-      ) : isRich && !rawView ? (
+      ) : collapsed ? null : isRich && !rawView ? (
         <div>
           <FieldRenderer fieldType={field.field_type} value={field.plaintext} />
         </div>
       ) : (
         <span className="text-sm break-all">
           {isEncrypted && !show
-            ? '••••••••'
-            : (field.plaintext || <span className="text-muted-foreground italic text-xs">空</span>)}
+            ? "••••••••"
+            : field.plaintext || (
+                <span className="text-muted-foreground italic text-xs">空</span>
+              )}
         </span>
       )}
     </div>
@@ -210,7 +296,10 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
     queryKey: ["entry", entryId],
     queryFn: () => getEntry(entryId),
   });
-  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: getSettings });
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: getSettings,
+  });
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [localFields, setLocalFields] = useState<DecryptedField[]>([]);
   const [rawFields, setRawFields] = useState<Set<number>>(new Set());
@@ -219,32 +308,72 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
   const [newFieldType, setNewFieldType] = useState("text");
   const [newFieldValue, setNewFieldValue] = useState("");
   const [showNewValue, setShowNewValue] = useState(false);
+  const [globalCollapseState, setGlobalCollapseState] = useState<
+    boolean | undefined
+  >(undefined);
 
-  const toggleRaw = (fieldId: number) => setRawFields(prev => {
-    const next = new Set(prev);
-    next.has(fieldId) ? next.delete(fieldId) : next.add(fieldId);
-    return next;
-  });
+  const [deleteFieldOpen, setDeleteFieldOpen] = useState<number | null>(null);
 
-  useEffect(() => { if (detail) setLocalFields(detail.fields); }, [detail]);
+  const toggleRaw = (fieldId: number) =>
+    setRawFields((prev) => {
+      const next = new Set(prev);
+      next.has(fieldId) ? next.delete(fieldId) : next.add(fieldId);
+      return next;
+    });
+
+  const handleToggleAllCollapse = () => {
+    setGlobalCollapseState((prev) => (prev === false ? true : false));
+  };
+
+  useEffect(() => {
+    if (detail) setLocalFields(detail.fields);
+  }, [detail]);
 
   if (isLoading || !detail) {
-    return <div className="flex items-center justify-center h-full text-muted-foreground text-sm">加载中...</div>;
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+        加载中...
+      </div>
+    );
   }
 
   const { entry } = detail;
-  const tags = entry.tags ? entry.tags.split(",").map(t => t.trim()).filter(Boolean) : [];
-  const domain = entry.url ? (() => { try { return new URL(entry.url).hostname; } catch { return null; } })() : null;
+  const tags = entry.tags
+    ? entry.tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean)
+    : [];
+  const domain = entry.url
+    ? (() => {
+        try {
+          return new URL(entry.url).hostname;
+        } catch {
+          return null;
+        }
+      })()
+    : null;
 
   const buildNewEntryFields = (fields: DecryptedField[]): NewEntryField[] =>
-    fields.map(f => ({ field_name: f.field_name, field_type: f.field_type, field_value: f.plaintext, sort_order: f.sort_order }));
+    fields.map((f) => ({
+      field_name: f.field_name,
+      field_type: f.field_type,
+      field_value: f.plaintext,
+      sort_order: f.sort_order,
+    }));
 
   const persistFields = async (fields: DecryptedField[]) => {
     await updateEntry({
-      id: entry.id, groupId: entry.group_id, title: entry.title,
-      url: entry.url, siteTitle: entry.site_title, username: entry.username,
-      templateType: entry.template_type, tags: entry.tags,
-      notes: entry.notes ?? null, favorite: entry.favorite,
+      id: entry.id,
+      groupId: entry.group_id,
+      title: entry.title,
+      url: entry.url,
+      siteTitle: entry.site_title,
+      username: entry.username,
+      templateType: entry.template_type,
+      tags: entry.tags,
+      notes: entry.notes ?? null,
+      favorite: entry.favorite,
       fields: buildNewEntryFields(fields),
     });
     qc.invalidateQueries({ queryKey: ["entry", entryId] });
@@ -252,7 +381,9 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
 
   const handleFieldSave = async (fieldId: number, newValue: string) => {
     const original = localFields;
-    const updated = localFields.map(f => f.id === fieldId ? { ...f, plaintext: newValue } : f);
+    const updated = localFields.map((f) =>
+      f.id === fieldId ? { ...f, plaintext: newValue } : f,
+    );
     setLocalFields(updated);
     try {
       await persistFields(updated);
@@ -263,9 +394,13 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
     }
   };
 
-  const handleFieldDelete = async (fieldId: number) => {
+  const handleFieldDeleteConfirm = async () => {
+    if (deleteFieldOpen === null) return;
+    const fieldId = deleteFieldOpen;
+    setDeleteFieldOpen(null);
+
     const original = localFields;
-    const updated = localFields.filter(f => f.id !== fieldId);
+    const updated = localFields.filter((f) => f.id !== fieldId);
     setLocalFields(updated);
     try {
       await persistFields(updated);
@@ -288,7 +423,11 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
     const updated = [...localFields, newField];
     setLocalFields(updated);
     await persistFields(updated);
-    setNewFieldName(""); setNewFieldType("text"); setNewFieldValue(""); setShowNewValue(false); setAddingField(false);
+    setNewFieldName("");
+    setNewFieldType("text");
+    setNewFieldValue("");
+    setShowNewValue(false);
+    setAddingField(false);
     toast.success("字段已添加");
   };
 
@@ -305,30 +444,53 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center overflow-hidden shrink-0">
             {domain ? (
-              <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=48`} alt=""
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${domain}&sz=48`}
+                alt=""
                 className="w-7 h-7"
-                onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
             ) : (
-              <span className="text-lg font-bold text-muted-foreground">{entry.title.charAt(0).toUpperCase()}</span>
+              <span className="text-lg font-bold text-muted-foreground">
+                {entry.title.charAt(0).toUpperCase()}
+              </span>
             )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-semibold truncate">{entry.title}</h2>
-              {entry.favorite && <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 shrink-0" />}
+              <h2 className="text-base font-semibold truncate">
+                {entry.title}
+              </h2>
+              {entry.favorite && (
+                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 shrink-0" />
+              )}
             </div>
             {entry.url && (
-              <button onClick={() => openUrl(entry.url!)}
-                className="text-xs text-primary hover:underline truncate block text-left">
+              <button
+                onClick={() => openUrl(entry.url!)}
+                className="text-xs text-primary hover:underline truncate block text-left"
+              >
                 {domain}
               </button>
             )}
           </div>
           <div className="flex gap-1 shrink-0">
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={onEdit}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={onEdit}
+            >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setDeleteOpen(true)}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setDeleteOpen(true)}
+            >
               <Trash2 className="h-3.5 w-3.5 text-destructive" />
             </Button>
           </div>
@@ -340,21 +502,41 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
         {/* Tags */}
         {tags.length > 0 && (
           <div className="flex gap-1 flex-wrap">
-            {tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+            {tags.map((tag) => (
+              <Badge key={tag} variant="secondary">
+                {tag}
+              </Badge>
+            ))}
           </div>
         )}
 
         {/* Fields */}
         <div className="flex flex-col gap-2">
-          {localFields.map(f => (
+          {localFields.some(
+            (f) =>
+              RICH_TYPES.has(f.field_type) ||
+              f.field_type === "text" ||
+              f.field_type === "secret",
+          ) && (
+            <div className="flex justify-end">
+              <button
+                onClick={handleToggleAllCollapse}
+                className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {globalCollapseState === false ? "全部折叠" : "全部展开"}
+              </button>
+            </div>
+          )}
+          {localFields.map((f) => (
             <FieldRow
               key={f.id}
               field={f}
               onSave={handleFieldSave}
-              onDelete={handleFieldDelete}
+              onDelete={(id) => setDeleteFieldOpen(id)}
               canDelete
               rawView={rawFields.has(f.id)}
               onToggleRaw={() => toggleRaw(f.id)}
+              forceCollapseState={globalCollapseState}
             />
           ))}
         </div>
@@ -362,35 +544,71 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
         {/* Add field */}
         {addingField ? (
           <div className="flex gap-2 items-center mt-1">
-            <Input placeholder="字段名" value={newFieldName} onChange={e => setNewFieldName(e.target.value)}
+            <Input
+              placeholder="字段名"
+              value={newFieldName}
+              onChange={(e) => setNewFieldName(e.target.value)}
               className="w-1/4 h-8 text-sm"
-              onKeyDown={e => { if (e.key === "Escape") setAddingField(false); }} />
-            <select value={newFieldType} onChange={e => setNewFieldType(e.target.value)}
-              className="h-8 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none w-[95px] shrink-0">
-              {["text","secret","token","password","url","email","number","date","markdown","code","json","yaml"].map(t => (
-                <option key={t} value={t}>{t}</option>
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setAddingField(false);
+              }}
+            />
+            <select
+              value={newFieldType}
+              onChange={(e) => setNewFieldType(e.target.value)}
+              className="h-8 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none w-[95px] shrink-0"
+            >
+              {[
+                "text",
+                "secret",
+                "token",
+                "password",
+                "url",
+                "email",
+                "number",
+                "date",
+                "markdown",
+                "code",
+                "json",
+                "yaml",
+              ].map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
               ))}
             </select>
-            {RICH_TYPES.has(newFieldType) || newFieldType === 'text' || newFieldType === 'secret' ? (
+            {RICH_TYPES.has(newFieldType) ||
+            newFieldType === "text" ||
+            newFieldType === "secret" ? (
               <div className="flex-1 relative">
                 <Textarea
                   placeholder="值"
                   value={newFieldValue}
-                  onChange={e => setNewFieldValue(e.target.value)}
+                  onChange={(e) => setNewFieldValue(e.target.value)}
                   className={cn(
-                    'w-full text-sm min-h-[80px] resize-y',
-                    !RICH_TYPES.has(newFieldType) && 'font-mono',
+                    "w-full text-sm min-h-[80px] resize-y",
+                    !RICH_TYPES.has(newFieldType) && "font-mono",
                   )}
-                  style={newFieldType === 'secret' && !showNewValue ? { WebkitTextSecurity: 'disc' } as React.CSSProperties : undefined}
-                  onKeyDown={e => { if (e.key === "Escape") setAddingField(false); }}
+                  style={
+                    newFieldType === "secret" && !showNewValue
+                      ? ({ WebkitTextSecurity: "disc" } as React.CSSProperties)
+                      : undefined
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setAddingField(false);
+                  }}
                 />
-                {newFieldType === 'secret' && (
+                {newFieldType === "secret" && (
                   <button
                     type="button"
-                    onClick={() => setShowNewValue(v => !v)}
+                    onClick={() => setShowNewValue((v) => !v)}
                     className="absolute top-1 right-1 text-muted-foreground hover:text-foreground"
                   >
-                    {showNewValue ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    {showNewValue ? (
+                      <EyeOff className="h-3.5 w-3.5" />
+                    ) : (
+                      <Eye className="h-3.5 w-3.5" />
+                    )}
                   </button>
                 )}
               </div>
@@ -398,44 +616,95 @@ export function EntryDetail({ entryId, onEdit, onDeleted }: Props) {
               <Input
                 placeholder="值"
                 value={newFieldValue}
-                onChange={e => setNewFieldValue(e.target.value)}
+                onChange={(e) => setNewFieldValue(e.target.value)}
                 className="flex-1 h-8 text-sm"
-                type={["password","token"].includes(newFieldType) ? "password" : "text"}
-                onKeyDown={e => { if (e.key === "Escape") setAddingField(false); }}
+                type={
+                  ["password", "token"].includes(newFieldType)
+                    ? "password"
+                    : "text"
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setAddingField(false);
+                }}
               />
             )}
-            <button onClick={handleAddField} className="text-primary hover:text-primary/80">
+            <button
+              onClick={handleAddField}
+              className="text-primary hover:text-primary/80"
+            >
               <Check className="h-4 w-4" />
             </button>
-            <button onClick={() => { setAddingField(false); setShowNewValue(false); }} className="text-muted-foreground hover:text-foreground">
+            <button
+              onClick={() => {
+                setAddingField(false);
+                setShowNewValue(false);
+              }}
+              className="text-muted-foreground hover:text-foreground"
+            >
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
         ) : (
-          <button onClick={() => setAddingField(true)}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground w-fit">
+          <button
+            onClick={() => setAddingField(true)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground w-fit"
+          >
             <Plus className="h-3.5 w-3.5" /> 添加字段
           </button>
         )}
 
         {/* Timestamps */}
         <div className="flex gap-4 text-xs text-muted-foreground mt-auto pt-4 border-t border-border">
-          <span>创建于 {formatDate(entry.created_at, settings?.timezone || undefined)}</span>
-          <span>更新于 {formatDate(entry.updated_at, settings?.timezone || undefined)}</span>
+          <span>
+            创建于{" "}
+            {formatDate(entry.created_at, settings?.timezone || undefined)}
+          </span>
+          <span>
+            更新于{" "}
+            {formatDate(entry.updated_at, settings?.timezone || undefined)}
+          </span>
         </div>
       </div>
+
+      {/* Delete Field Confirmation */}
+      <AlertDialog
+        open={deleteFieldOpen !== null}
+        onOpenChange={(o) => !o && setDeleteFieldOpen(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除字段？</AlertDialogTitle>
+            <AlertDialogDescription>
+              此操作将删除该字段及其内容，此操作无法撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleFieldDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete confirmation */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>删除 "{entry.title}"？</AlertDialogTitle>
-            <AlertDialogDescription>此操作无法撤销，该条目的所有数据将被永久删除。</AlertDialogDescription>
+            <AlertDialogDescription>
+              此操作无法撤销，该条目的所有数据将被永久删除。
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               删除
             </AlertDialogAction>
           </AlertDialogFooter>
